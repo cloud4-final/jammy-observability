@@ -1,0 +1,35 @@
+groups:
+  - name: site_connectivity_and_health
+    rules:
+      # 1. 개별 타겟 장애 (Site Collector는 정상인데 특정 VM/서비스만 죽었을 때)
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Target {{ $labels.instance }} down on {{ $labels.site }}"
+          description: "Target {{ $labels.job }} on {{ $labels.instance }} has been unreachable for more than 1 minute."
+
+      # 2. 거점 전체 단절 감지 (해당 거점의 모든 scrape 대상이 동시에 응답 없을 때)
+      - alert: SiteNetworkPartition
+        expr: sum by (site) (up) == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Network Partition detected for site: {{ $labels.site }}"
+          description: "All monitoring targets in {{ $labels.site }} are completely unreachable. Likely VPN or ISP link failure."
+
+      # 3. 고에러율 감지 (애플리케이션 계층)
+      - alert: HighHttpErrorRate
+        expr: |
+          sum(rate(http_requests_total{status_code=~"5.."}[2m])) by (site, endpoint)
+          /
+          sum(rate(http_requests_total[2m])) by (site, endpoint) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.endpoint }} (site: {{ $labels.site }})"
+          description: "5xx error rate exceeds 5% for the last 2 minutes."
