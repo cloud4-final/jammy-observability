@@ -79,6 +79,10 @@ if [[ ! -f "${secrets_dir}/demo_pg_password" ]]; then
   openssl rand -base64 16 > "${secrets_dir}/demo_pg_password"
 fi
 chmod 600 "${secrets_dir}/demo_pg_password"
+if docker ps -a --format '{{.Names}}' | grep -q '^jammy-obs-demo-postgres$'; then
+  docker rm -f jammy-obs-demo-postgres || true
+fi
+docker run --rm -v "${target_root}/data:/data" alpine rm -rf /data/demo-postgres || rm -rf "${target_root}/data/demo-postgres"
 mkdir -p "${target_root}/data/demo-postgres"
 EOF
   if [[ -d "${REPO_ROOT}/apps/collector" ]]; then

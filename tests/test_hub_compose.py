@@ -178,13 +178,9 @@ def test_blackbox_has_net_raw():
     }
     for name, svc in base_services.items():
         user = str(svc.get("user", ""))
-        assert "1000" in user, (
-            f"Service {name} expected user 1000, got: {user}"
-        )
+        assert "1000" in user, f"Service {name} expected user 1000, got: {user}"
         caps = svc.get("cap_add", [])
-        assert "NET_RAW" not in caps, (
-            f"Service {name} should not have NET_RAW cap_add"
-        )
+        assert "NET_RAW" not in caps, f"Service {name} should not have NET_RAW cap_add"
 
 
 DEMO_SERVICES = {"demo-postgres", "demo-collector", "demo-alloy"}
@@ -194,7 +190,9 @@ def test_demo_services_profiled():
     compose = load_compose()
     services = compose.get("services", {})
     for svc_name in DEMO_SERVICES:
-        assert svc_name in services, f"Demo service {svc_name} missing from compose.yaml"
+        assert svc_name in services, (
+            f"Demo service {svc_name} missing from compose.yaml"
+        )
         profiles = services[svc_name].get("profiles", [])
         assert profiles == ["demo"], (
             f"Service {svc_name} profiles mismatch: {profiles} != ['demo']"
@@ -205,7 +203,9 @@ def test_demo_ports_loopback():
     compose = load_compose()
     services = compose.get("services", {})
     for svc_name in DEMO_SERVICES:
-        assert svc_name in services, f"Demo service {svc_name} missing from compose.yaml"
+        assert svc_name in services, (
+            f"Demo service {svc_name} missing from compose.yaml"
+        )
 
     pg_cmd = " ".join(services["demo-postgres"].get("command", []))
     assert "listen_addresses=127.0.0.1" in pg_cmd, (
@@ -231,3 +231,18 @@ def test_demo_targets_default_empty():
     assert targets == [], f"demo.yml must default to [], got: {targets}"
 
 
+def test_demo_collector_reads_secret_as_owner():
+    compose = load_compose()
+    services = compose.get("services", {})
+    assert "demo-collector" in services, "demo-collector missing from compose.yaml"
+    collector_user = str(services["demo-collector"].get("user", ""))
+    assert "OBS_UID" in collector_user, (
+        f"demo-collector expected user based on OBS_UID, got: {collector_user}"
+    )
+
+    assert "demo-postgres" in services, "demo-postgres missing from compose.yaml"
+    pg_env = services["demo-postgres"].get("environment", {})
+    initdb_args = pg_env.get("POSTGRES_INITDB_ARGS", "")
+    assert "--auth-host=scram-sha-256" in initdb_args, (
+        f"demo-postgres missing --auth-host=scram-sha-256 in POSTGRES_INITDB_ARGS: {initdb_args}"
+    )

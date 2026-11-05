@@ -121,6 +121,8 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/demo_pg_password
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     secrets:
       - demo_pg_password
     volumes:
@@ -138,7 +140,10 @@ services:
     container_name: jammy-obs-demo-collector
     restart: unless-stopped
     network_mode: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
     environment:
+      HOME: /home/appuser
+      PYTHONPATH: /app:/home/appuser/.local/lib/python3.12/site-packages
       SITE_ID: jammy-obs
       OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
     secrets:
@@ -147,6 +152,7 @@ services:
       - sh
       - -c
       - |
+        set -eu
         PG_PASS=$$(python3 -c "import urllib.parse; print(urllib.parse.quote_plus(open('/run/secrets/demo_pg_password').read().strip()))")
         export DATABASE_URL="postgresql://postgres:$${PG_PASS}@127.0.0.1:5432/postgres"
         exec "$$@"
