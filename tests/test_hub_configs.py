@@ -55,6 +55,11 @@ def test_blackbox_jobs_use_file_sd_with_vantage():
         for r in relabel
     )
     assert vantage_set, "blackbox_icmp relabel_configs does not set vantage=jammy-obs"
+    target_site_set = any(
+        r.get("target_label") == "target_site"
+        for r in relabel
+    )
+    assert target_site_set, "blackbox_icmp relabel_configs does not set target_site"
 
 
 def test_prometheus_internal_targets_no_localhost():
