@@ -1,0 +1,25 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by:
+    - alertname
+    - site
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: discord
+
+inhibit_rules:
+  - source_matchers:
+      - alertname = SiteProbeDown
+    target_matchers:
+      - alertname =~ "InstanceDown|SiteTelemetryMissing"
+    equal:
+      - site
+
+receivers:
+  - name: discord
+    discord_configs:
+      - webhook_url_file: /etc/alertmanager/secrets/discord_webhook_url
+        send_resolved: true

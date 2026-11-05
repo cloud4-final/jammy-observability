@@ -1,0 +1,14 @@
+- targets:
+    - jammy-a
+  labels:
+    site: jammy-a
+
+- targets:
+    - jammy-b
+  labels:
+    site: jammy-b
+
+- targets:
+    - jammy-c
+  labels:
+    site: jammy-c

@@ -3,7 +3,7 @@ groups:
     rules:
       # 1. 개별 타겟 장애 (Site Collector는 정상인데 특정 VM/서비스만 죽었을 때)
       - alert: InstanceDown
-        expr: up == 0
+        expr: up{vantage=""} == 0
         for: 1m
         labels:
           severity: warning
@@ -13,12 +13,12 @@ groups:
 
       # 2. 거점 전체 단절 감지 (해당 거점의 모든 scrape 대상이 동시에 응답 없을 때)
       - alert: SiteNetworkPartition
-        expr: sum by (site) (up) == 0
+        expr: sum by (site) (up{vantage=""}) == 0
         for: 30s
         labels:
           severity: critical
         annotations:
-          summary: "Network Partition detected for site: {{ $labels.site }}"
+          summary: "수집은 되지만 모든 타겟 up=0 (site: {{ $labels.site }})"
           description: "All monitoring targets in {{ $labels.site }} are completely unreachable. Likely VPN or ISP link failure."
 
       # 3. 고에러율 감지 (애플리케이션 계층)
@@ -33,3 +33,43 @@ groups:
         annotations:
           summary: "High 5xx error rate on {{ $labels.endpoint }} (site: {{ $labels.site }})"
           description: "5xx error rate exceeds 5% for the last 2 minutes."
+
+      # 4. 외부 프로브 장애 (obs에서 거점으로의 ICMP ping 실패)
+      - alert: SiteProbeDown
+        expr: probe_success{job="blackbox_icmp",vantage="jammy-obs"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ICMP probe failed from jammy-obs to site: {{ $labels.site }}"
+          description: "Blackbox ICMP probe to {{ $labels.site }} ({{ $labels.instance }}) from jammy-obs has been failing for more than 2 minutes."
+
+      # 5. 거점 원격 전송 단절 (데이터 누락/침묵 상태 감지)
+      - alert: SiteTelemetryMissing
+        expr: group by (site) (up{site=~"jammy-[abc]",vantage=""} offset 10m) unless group by (site) (up{site=~"jammy-[abc]",vantage=""})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unknown: 데이터 없음(다운 확정 아님) - site: {{ $labels.site }}"
+          description: "No scrape or remote_write metrics received from {{ $labels.site }} for more than 10 minutes. Node might be isolated, down, or remote-write halted."
+
+      # 6. 중앙 Prometheus Remote Write 수신/전송 실패
+      - alert: RemoteWriteFailing
+        expr: rate(prometheus_remote_storage_samples_failed_total[5m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Remote write storage samples failing"
+          description: "Prometheus remote storage samples failed at rate > 0 for 10 minutes."
+
+      # 7. 중앙 관측 허브 디스크 부족
+      - alert: HubDiskLow
+        expr: node_filesystem_avail_bytes{site="jammy-obs",mountpoint="/"} / node_filesystem_size_bytes{site="jammy-obs",mountpoint="/"} < 0.15
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Root disk low on jammy-obs (< 15% available)"
+          description: "Host root filesystem available space on jammy-obs is below 15% for more than 10 minutes."

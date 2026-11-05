@@ -1,0 +1,83 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 127.0.0.1:9093
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - 127.0.0.1:9090
+        labels:
+          site: jammy-obs
+          layer: central-obs
+
+  - job_name: alertmanager
+    static_configs:
+      - targets:
+          - 127.0.0.1:9093
+        labels:
+          site: jammy-obs
+          layer: central-obs
+
+  - job_name: loki
+    static_configs:
+      - targets:
+          - 127.0.0.1:3100
+        labels:
+          site: jammy-obs
+          layer: central-obs
+
+  - job_name: tempo
+    static_configs:
+      - targets:
+          - 127.0.0.1:3200
+        labels:
+          site: jammy-obs
+          layer: central-obs
+
+  - job_name: grafana
+    static_configs:
+      - targets:
+          - 127.0.0.1:3000
+        labels:
+          site: jammy-obs
+          layer: central-obs
+
+  - job_name: node
+    static_configs:
+      - targets:
+          - 127.0.0.1:9100
+        labels:
+          site: jammy-obs
+          layer: central-obs
+
+  - job_name: blackbox_icmp
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    file_sd_configs:
+      - files:
+          - targets/sites.yml
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+      - target_label: vantage
+        replacement: jammy-obs
+
+  - job_name: demo
+    file_sd_configs:
+      - files:
+          - targets/demo.yml
