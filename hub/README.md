@@ -103,6 +103,16 @@ curl -s -u admin:<password> http://127.0.0.1:3000/api/datasources/proxy/uid/aler
 ```
 또는 Grafana UI에서 `/api/datasources/proxy/uid/alertmanager/api/v2/status` 경로를 통해 HTTP 200과 Alertmanager 클러스터 상태를 확인합니다.
 
+#### Grafana 대시보드 실데이터 검증 (check_dashboards.sh)
+배포된 대시보드 4종(`jammy-noc`, `jammy-network`, `jammy-vms`, `jammy-app`)의 템플릿 변수 기본값(`current.value`), 변수 쿼리 실행 결과 및 모든 패널의 PromQL/LogQL 시계열 수신 상태를 검증합니다:
+```bash
+# jammy-obs 호스트에서 직접 실행
+bash /opt/jammy-obs/stack/hub/check_dashboards.sh
+
+# 또는 로컬에서 SSH로 원격 실행
+ssh yang@jammy-obs bash /opt/jammy-obs/stack/hub/check_dashboards.sh
+```
+
 ### Grafana 접속법
 현재 Tailscale ACL이 팀원 기기→obs를 22/ICMP만 허용하므로, 브라우저 직접 접근이 차단됩니다. 아래와 같이 SSH 로컬 포트 포워딩을 수행한 후 접속합니다:
 ```bash

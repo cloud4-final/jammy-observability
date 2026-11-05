@@ -51,7 +51,13 @@ COLLECTOR_IMAGE="myregistry/jammy-collector:v1.0" ./hub/deploy.sh --demo
 ssh yang@jammy-obs bash /opt/jammy-obs/stack/hub/smoke.sh
 ```
 
-### 3.3 Grafana 대시보드 터널링
+### 3.3 Grafana 대시보드 Live 검증
+배포된 Grafana 대시보드 4종(`jammy-noc`, `jammy-network`, `jammy-vms`, `jammy-app`)의 템플릿 변수 기본값(`current.value`), 변수 쿼리 실행 결과 및 모든 패널의 PromQL/LogQL 시계열 수신 상태를 일괄 검증합니다:
+```bash
+ssh yang@jammy-obs bash /opt/jammy-obs/stack/hub/check_dashboards.sh
+```
+
+### 3.4 Grafana 대시보드 터널링
 Tailnet 보안 정책(스택 포트 직접 노출 차단)에 따라 SSH 로컬 포트 포워딩으로 접근합니다:
 ```bash
 ssh -L 3000:127.0.0.1:3000 yang@jammy-obs

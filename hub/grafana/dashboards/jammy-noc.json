@@ -18,16 +18,89 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Network & Links",
+      "tooltip": "Go to Network & Links dashboard",
+      "type": "link",
+      "url": "/d/jammy-network"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "KVM Hosts & VMs",
+      "tooltip": "Go to KVM Hosts & VMs dashboard",
+      "type": "link",
+      "url": "/d/jammy-vms"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Collector API",
+      "tooltip": "Go to Collector API dashboard",
+      "type": "link",
+      "url": "/d/jammy-app"
+    }
+  ],
   "liveNow": false,
   "panels": [
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "alertmanager",
+        "uid": "alertmanager"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 20,
+      "options": {
+        "alertInstanceLabelFilter": "",
+        "alertName": "",
+        "dashboardAlerts": false,
+        "groupBy": [],
+        "groupMode": "default",
+        "maxItems": 20,
+        "showInactiveAlerts": false,
+        "showInstances": true,
+        "sortOrder": 1,
+        "stateFilter": {
+          "error": false,
+          "firing": true,
+          "noData": false,
+          "normal": false,
+          "pending": true,
+          "recovering": false
+        },
+        "viewMode": "list"
+      },
+      "title": "Active Alerts (Firing / Pending)",
+      "type": "alertlist"
+    },
     {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 5
       },
       "id": 100,
       "title": "Site Connectivity & Health (ICMP Probe)",
@@ -86,9 +159,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
+        "w": 8,
         "x": 0,
-        "y": 1
+        "y": 6
       },
       "id": 1,
       "options": {
@@ -142,9 +215,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
-        "x": 12,
-        "y": 1
+        "w": 8,
+        "x": 8,
+        "y": 6
       },
       "id": 2,
       "options": {
@@ -184,7 +257,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 10
       },
       "id": 101,
       "title": "Scrape Target Status",
@@ -228,7 +301,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 11
       },
       "id": 3,
       "options": {
@@ -267,7 +340,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 17
       },
       "id": 102,
       "title": "Host Node Resource Metrics",
@@ -319,7 +392,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 13
+        "y": 18
       },
       "id": 4,
       "options": {
@@ -369,7 +442,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 13
+        "y": 18
       },
       "id": 5,
       "options": {
@@ -414,7 +487,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 13
+        "y": 18
       },
       "id": 6,
       "options": {
@@ -446,7 +519,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 24
       },
       "id": 103,
       "title": "Application Performance",
@@ -471,7 +544,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 20
+        "y": 25
       },
       "id": 7,
       "options": {
@@ -516,7 +589,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 20
+        "y": 25
       },
       "id": 8,
       "options": {
@@ -548,7 +621,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 31
       },
       "id": 104,
       "title": "Central Logs (Loki)",
@@ -563,7 +636,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 32
       },
       "id": 9,
       "options": {
@@ -589,6 +662,68 @@
       ],
       "title": "Loki Logs",
       "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "id": 21,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "libvirt_domains_number{site=~\"$site\"}",
+          "legendFormat": "{{site}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Site Virtual Machines",
+      "type": "stat"
     }
   ],
   "refresh": "10s",
