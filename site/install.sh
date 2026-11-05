@@ -183,7 +183,7 @@ for port in "${CHECK_PORTS[@]}"; do
     is_ours=false
     if command -v systemctl >/dev/null 2>&1 && systemctl is-active "$expected_unit" >/dev/null 2>&1; then
       unit_pid=$(systemctl show -p MainPID --value "$expected_unit" 2>/dev/null || true)
-      if [ -n "$unit_pid" ] && [ "$unit_pid" != "0" ] && echo "$listener_info" | grep -q "pid=${unit_pid},"; then
+      if [ -n "$unit_pid" ] && [ "$unit_pid" != "0" ] && echo "$listener_info" | grep -qE "(pid=${unit_pid},|[[:space:]]${unit_pid}/)"; then
         is_ours=true
       fi
     fi
@@ -200,7 +200,7 @@ if [ "$DRY_RUN" = true ]; then
   echo "[dry-run] Would create system user obsagent and add to systemd-journal."
   echo "[dry-run] Would create /opt/jammy-obs-agent/{bin,etc} and /var/lib/jammy-obs-agent/{prometheus,alloy}."
   echo "[dry-run] Would download and install Prometheus, Node Exporter, Blackbox Exporter, Alloy."
-  echo "[dry-run] Would apt-get install prometheus-libvirt-exporter and configure 127.0.0.1:9177."
+  echo "[dry-run] Would pre-configure and apt-get install prometheus-libvirt-exporter on 127.0.0.1:9177 with read-only socket."
   echo "[dry-run] Would render configuration templates to /opt/jammy-obs-agent/etc/."
   echo "[dry-run] Would install systemd service units."
   if [ "$NO_START" = false ]; then
@@ -324,17 +324,47 @@ fi
 
 # Step 6: Install and configure prometheus-libvirt-exporter
 echo "Configuring prometheus-libvirt-exporter..."
-if ! dpkg -s prometheus-libvirt-exporter >/dev/null 2>&1; then
-  apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq prometheus-libvirt-exporter
+LIBVIRT_CONF="/etc/default/prometheus-libvirt-exporter"
+DESIRED_LIBVIRT_ARGS='ARGS="--web.listen-address=127.0.0.1:9177 --libvirt.uri=qemu:///system?socket=/var/run/libvirt/libvirt-sock-ro"'
+libvirt_args_changed=false
+
+mkdir -p /etc/default
+if [ -f "$LIBVIRT_CONF" ]; then
+  current_line=$(grep -E '^ARGS=' "$LIBVIRT_CONF" 2>/dev/null || true)
+  if [ "$current_line" != "$DESIRED_LIBVIRT_ARGS" ]; then
+    libvirt_args_changed=true
+    if grep -q '^ARGS=' "$LIBVIRT_CONF"; then
+      sed -i "s|^ARGS=.*|${DESIRED_LIBVIRT_ARGS}|" "$LIBVIRT_CONF"
+    else
+      echo "$DESIRED_LIBVIRT_ARGS" >> "$LIBVIRT_CONF"
+    fi
+  fi
+else
+  # Pre-create config before package installation so default :9177 is never exposed
+  libvirt_args_changed=true
+  echo "$DESIRED_LIBVIRT_ARGS" > "$LIBVIRT_CONF"
 fi
 
-LIBVIRT_CONF="/etc/default/prometheus-libvirt-exporter"
-if [ -f "$LIBVIRT_CONF" ]; then
-  if grep -q "^ARGS=" "$LIBVIRT_CONF"; then
-    sed -i 's|^ARGS=.*|ARGS="--web.listen-address=127.0.0.1:9177"|' "$LIBVIRT_CONF"
+if ! dpkg -s prometheus-libvirt-exporter >/dev/null 2>&1; then
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::=--force-confold prometheus-libvirt-exporter
+fi
+
+# Re-check config in case dpkg or package postinst modified it
+current_line=$(grep -E '^ARGS=' "$LIBVIRT_CONF" 2>/dev/null || true)
+if [ "$current_line" != "$DESIRED_LIBVIRT_ARGS" ]; then
+  libvirt_args_changed=true
+  if grep -q '^ARGS=' "$LIBVIRT_CONF"; then
+    sed -i "s|^ARGS=.*|${DESIRED_LIBVIRT_ARGS}|" "$LIBVIRT_CONF"
   else
-    echo 'ARGS="--web.listen-address=127.0.0.1:9177"' >> "$LIBVIRT_CONF"
+    echo "$DESIRED_LIBVIRT_ARGS" >> "$LIBVIRT_CONF"
+  fi
+fi
+
+if [ "$libvirt_args_changed" = true ] && [ "$NO_START" = false ]; then
+  if command -v systemctl >/dev/null 2>&1; then
+    echo "Restarting prometheus-libvirt-exporter due to ARGS update..."
+    systemctl restart prometheus-libvirt-exporter
   fi
 fi
 

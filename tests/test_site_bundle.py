@@ -91,16 +91,16 @@ def test_self_probe_dropped(rendered_bundle):
 def test_all_listen_loopback(rendered_bundle):
     # Check rendered configuration files
     rendered_alloy = rendered_bundle / "etc" / "config.alloy"
-    if rendered_alloy.exists():
-        content = rendered_alloy.read_text(encoding="utf-8")
-        # otelcol endpoints should only listen on 127.0.0.1
-        for match in re.finditer(r'endpoint\s*=\s*"([^"]+)"', content):
-            endpoint = match.group(1)
-            # remote push is ok, listen endpoints should be 127.0.0.1
-            if "jammy-obs" not in endpoint:
-                assert endpoint.startswith("127.0.0.1:"), (
-                    f"Non-loopback listen endpoint in alloy: {endpoint}"
-                )
+    assert rendered_alloy.exists(), f"{rendered_alloy} does not exist"
+    content = rendered_alloy.read_text(encoding="utf-8")
+    # otelcol endpoints should only listen on 127.0.0.1
+    for match in re.finditer(r'endpoint\s*=\s*"([^"]+)"', content):
+        endpoint = match.group(1)
+        # remote push is ok, listen endpoints should be 127.0.0.1
+        if "jammy-obs" not in endpoint:
+            assert endpoint.startswith("127.0.0.1:"), (
+                f"Non-loopback listen endpoint in alloy: {endpoint}"
+            )
 
     # Check systemd units
     for unit_name in UNIT_FILES:
@@ -193,3 +193,69 @@ def test_units_marked_managed():
         assert first_line == "# managed-by: jammy-obs-agent", (
             f"First line of {unit_name} must be '# managed-by: jammy-obs-agent', but got: '{first_line}'"
         )
+
+
+def test_alloy_journal_relabel(rendered_bundle):
+    rendered_alloy = rendered_bundle / "etc" / "config.alloy"
+    assert rendered_alloy.exists(), f"{rendered_alloy} does not exist"
+    content = rendered_alloy.read_text(encoding="utf-8")
+
+    assert "relabel_rules = loki.relabel.journal.rules" in content, (
+        "missing relabel_rules = loki.relabel.journal.rules in config.alloy"
+    )
+
+    # loki.relabel "journal" forward_to must be empty
+    relabel_match = re.search(
+        r'loki\.relabel\s+"journal"\s*\{(?P<body>[\s\S]*?)\n\}', content
+    )
+    assert relabel_match, 'loki.relabel "journal" block not found'
+    relabel_body = relabel_match.group("body")
+    assert re.search(r"forward_to\s*=\s*\[\s*\]", relabel_body), (
+        f"loki.relabel 'journal' forward_to must be empty '[]', but got:\n{relabel_body}"
+    )
+
+
+def test_libvirt_args_and_precreation():
+    content = INSTALL_SH.read_text(encoding="utf-8")
+    expected_args = "--web.listen-address=127.0.0.1:9177 --libvirt.uri=qemu:///system?socket=/var/run/libvirt/libvirt-sock-ro"
+    assert expected_args in content, (
+        f"install.sh missing expected libvirt ARGS: {expected_args}"
+    )
+
+    # Dpkg force-confold option must be used
+    assert "--force-confold" in content, (
+        "install.sh must use -o Dpkg::Options::=--force-confold for apt-get install"
+    )
+
+    # Pre-creation check: writing to /etc/default/prometheus-libvirt-exporter must occur before apt-get install of libvirt exporter
+    pre_create_pos = content.find("/etc/default/prometheus-libvirt-exporter")
+    apt_install_pos = content.find(
+        "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::=--force-confold prometheus-libvirt-exporter"
+    )
+    assert pre_create_pos != -1, (
+        "Missing /etc/default/prometheus-libvirt-exporter in install.sh"
+    )
+    assert apt_install_pos != -1, (
+        "Missing apt-get install of libvirt exporter in install.sh"
+    )
+    assert pre_create_pos < apt_install_pos, (
+        "/etc/default/prometheus-libvirt-exporter must be pre-configured before apt-get install"
+    )
+
+
+def test_install_netstat_pid_pattern():
+    content = INSTALL_SH.read_text(encoding="utf-8")
+    expected_pattern = (
+        r'grep -qE "\(pid=\$\{unit_pid\},\|\[\[:space:\]\]\$\{unit_pid\}/\)"'
+    )
+    assert re.search(expected_pattern, content), (
+        'install.sh must use PID matching pattern: grep -qE "(pid=${unit_pid},|[[:space:]]${unit_pid}/)"'
+    )
+
+
+def test_readme_libvirt_guidance():
+    readme_path = SITE_DIR / "README.md"
+    assert readme_path.exists()
+    readme_content = readme_path.read_text(encoding="utf-8")
+    assert "curl -s 127.0.0.1:9177/metrics | grep libvirt_up" in readme_content
+    assert "coordinator" in readme_content

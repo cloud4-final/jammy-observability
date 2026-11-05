@@ -2,16 +2,8 @@
 // Collects systemd journal logs and forwards to central Loki
 // Receives OTLP metrics/logs/traces and forwards to central Tempo/OTLP collector
 
-loki.source.journal "systemd_journal" {
-  max_age    = "12h"
-  forward_to = [loki.relabel.journal.receiver]
-  labels     = {
-    job = "journal",
-  }
-}
-
 loki.relabel "journal" {
-  forward_to = [loki.write.jammy_obs.receiver]
+  forward_to = []
 
   rule {
     source_labels = ["__journal__systemd_unit"]
@@ -21,6 +13,15 @@ loki.relabel "journal" {
   rule {
     source_labels = ["__journal__hostname"]
     target_label  = "host"
+  }
+}
+
+loki.source.journal "systemd_journal" {
+  max_age       = "12h"
+  relabel_rules = loki.relabel.journal.rules
+  forward_to    = [loki.write.jammy_obs.receiver]
+  labels        = {
+    job = "journal",
   }
 }
 

@@ -19,6 +19,10 @@
 | **Blackbox Exporter** (v0.29.1) | 거점 간 ICMP/SSH 연결성 프로브 | `127.0.0.1:9115` | - | `CAP_NET_RAW` 권한 부여 |
 | **Grafana Alloy** (v1.21.3) | journald 로그 및 OTLP 트레이스/메트릭 수집·전송 | `127.0.0.1:12345` | `/var/lib/jammy-obs-agent/alloy` | OTLP gRPC `127.0.0.1:4317`, HTTP `127.0.0.1:4318` |
 
+> **중요 안내 (libvirt exporter 권한 및 검증):**
+> 패키지 unit은 `User=prometheus`로 구동되므로 Host 그룹 변경 없이 읽기 전용 소켓(`ARGS="--web.listen-address=127.0.0.1:9177 --libvirt.uri=qemu:///system?socket=/var/run/libvirt/libvirt-sock-ro"`)을 사용합니다.
+> 거점 적용 시 `curl -s 127.0.0.1:9177/metrics | grep libvirt_up` 확인, 실패하면 coordinator 보고(그룹 변경은 승인 사항).
+
 > **중요 안내 (OTLP 수신 포트 바인딩):**
 > 현재 Alloy의 OTLP 수신 포트(`4317`, `4318`)는 `127.0.0.1` 루프백에만 바인드되어 있습니다.
 > 추후 거점 K8s(k3s) Pod에서 발생하는 애플리케이션 트레이스를 호스트 Alloy로 직접 수집하기 위한 `br-vm` 가상 브릿지 인터페이스 바인딩은 인프라/방화벽 담당 팀원과의 네트워크 보안 정책 합의 후 별도로 전환합니다.
