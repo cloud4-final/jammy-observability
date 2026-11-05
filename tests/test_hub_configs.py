@@ -4,8 +4,8 @@ from pathlib import Path
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-HUB_DIR = REPO_ROOT / "observability" / "hub"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+HUB_DIR = REPO_ROOT / "hub"
 COMPOSE_PATH = HUB_DIR / "compose.yaml"
 PROMETHEUS_YML = HUB_DIR / "prometheus" / "prometheus.yml"
 SITES_YML = HUB_DIR / "prometheus" / "targets" / "sites.yml"
@@ -171,7 +171,7 @@ def test_dashboard_has_site_variable_and_no_ips():
 
 
 def test_rules_and_dashboard_use_vantage_filter():
-    rules_file = REPO_ROOT / "observability" / "alerts" / "rules.yml"
+    rules_file = REPO_ROOT / "alerts" / "rules.yml"
     assert rules_file.exists()
     with open(rules_file, "r", encoding="utf-8") as f:
         rules_cfg = yaml.safe_load(f)

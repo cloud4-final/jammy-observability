@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-SITE_DIR = REPO_ROOT / "observability" / "site"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SITE_DIR = REPO_ROOT / "site"
 INSTALL_SH = SITE_DIR / "install.sh"
 SYSTEMD_DIR = SITE_DIR / "systemd"
 VERSIONS_ENV = SITE_DIR / "versions.env"
