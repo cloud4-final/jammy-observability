@@ -1,0 +1,61 @@
+rule_files:
+  - rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Test Case (a): up{site="jammy-b"} disappears after 15 minutes -> SiteTelemetryMissing fires
+  - interval: 1m
+    input_series:
+      - series: 'up{site="jammy-b",instance="jammy-b:9100",job="node"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: SiteTelemetryMissing
+        exp_alerts: []
+      - eval_time: 27m
+        alertname: SiteTelemetryMissing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              site: jammy-b
+            exp_annotations:
+              summary: "Unknown: 데이터 없음(다운 확정 아님) - site: jammy-b"
+              description: "No scrape or remote_write metrics received from jammy-b for more than 10 minutes. Node might be isolated, down, or remote-write halted."
+
+  # Test Case (b): probe_success == 0 for 3m -> SiteProbeDown fires
+  - interval: 1m
+    input_series:
+      - series: 'probe_success{job="blackbox_icmp",vantage="jammy-obs",site="jammy-c",instance="jammy-c"}'
+        values: '0 0 0 0'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: SiteProbeDown
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: SiteProbeDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              site: jammy-c
+              job: blackbox_icmp
+              vantage: jammy-obs
+              instance: jammy-c
+            exp_annotations:
+              summary: "ICMP probe failed from jammy-obs to site: jammy-c"
+              description: "Blackbox ICMP probe to jammy-c (jammy-c) from jammy-obs has been failing for more than 2 minutes."
+
+  # Test Case (c): Both normal -> nothing fires
+  - interval: 1m
+    input_series:
+      - series: 'up{site="jammy-a",instance="jammy-a:9100",job="node"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'probe_success{job="blackbox_icmp",vantage="jammy-obs",site="jammy-a",instance="jammy-a"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: SiteTelemetryMissing
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: SiteProbeDown
+        exp_alerts: []

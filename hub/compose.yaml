@@ -1,0 +1,109 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.13.5
+    container_name: jammy-obs-prometheus
+    restart: unless-stopped
+    network_mode: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.listen-address=0.0.0.0:9090
+      - --web.enable-remote-write-receiver
+      - --web.enable-lifecycle
+      - --storage.tsdb.retention.time=14d
+      - --storage.tsdb.retention.size=60GB
+    volumes:
+      - ${OBS_ROOT:-/opt/jammy-obs}/data/prometheus:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/targets:/etc/prometheus/targets:ro
+      - ../alerts:/etc/prometheus/alerts:ro
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.2
+    container_name: jammy-obs-alertmanager
+    restart: unless-stopped
+    network_mode: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=0.0.0.0:9093
+      - --cluster.listen-address=
+    volumes:
+      - ${OBS_ROOT:-/opt/jammy-obs}/data/alertmanager:/alertmanager
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${OBS_ROOT:-/opt/jammy-obs}/secrets:/etc/alertmanager/secrets:ro
+
+  loki:
+    image: grafana/loki:3.7.7
+    container_name: jammy-obs-loki
+    restart: unless-stopped
+    network_mode: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    command:
+      - -config.file=/etc/loki/loki.yaml
+    volumes:
+      - ${OBS_ROOT:-/opt/jammy-obs}/data/loki:/loki
+      - ./loki:/etc/loki:ro
+
+  tempo:
+    image: grafana/tempo:3.1.1
+    container_name: jammy-obs-tempo
+    restart: unless-stopped
+    network_mode: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    command:
+      - -config.file=/etc/tempo/tempo.yaml
+      - -backend-scheduler.provider.work.compaction.block-retention=72h
+    volumes:
+      - ${OBS_ROOT:-/opt/jammy-obs}/data/tempo:/var/tempo
+      - ./tempo:/etc/tempo:ro
+
+  grafana:
+    image: grafana/grafana:13.2.5
+    container_name: jammy-obs-grafana
+    restart: unless-stopped
+    network_mode: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_SERVER_HTTP_ADDR: "0.0.0.0"
+    secrets:
+      - grafana_admin_password
+    volumes:
+      - ${OBS_ROOT:-/opt/jammy-obs}/data/grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.29.1
+    container_name: jammy-obs-blackbox
+    restart: unless-stopped
+    network_mode: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    command:
+      - --config.file=/etc/blackbox/blackbox.yml
+      - --web.listen-address=127.0.0.1:9115
+    volumes:
+      - ./blackbox:/etc/blackbox:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    container_name: jammy-obs-node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=127.0.0.1:9100
+    volumes:
+      - /:/host:ro,rslave
+
+secrets:
+  grafana_admin_password:
+    file: ${OBS_ROOT:-/opt/jammy-obs}/secrets/grafana_admin_password

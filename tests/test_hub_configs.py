@@ -1,0 +1,137 @@
+import json
+import re
+from pathlib import Path
+
+import yaml
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+HUB_DIR = REPO_ROOT / "observability" / "hub"
+COMPOSE_PATH = HUB_DIR / "compose.yaml"
+PROMETHEUS_YML = HUB_DIR / "prometheus" / "prometheus.yml"
+SITES_YML = HUB_DIR / "prometheus" / "targets" / "sites.yml"
+ALERTMANAGER_YML = HUB_DIR / "alertmanager" / "alertmanager.yml"
+DATASOURCES_YAML = (
+    HUB_DIR / "grafana" / "provisioning" / "datasources" / "datasources.yaml"
+)
+DASHBOARD_JSON = HUB_DIR / "grafana" / "dashboards" / "jammy-noc.json"
+
+
+def test_remote_write_receiver_enabled():
+    assert COMPOSE_PATH.exists()
+    with open(COMPOSE_PATH, "r", encoding="utf-8") as f:
+        compose = yaml.safe_load(f)
+    prom_svc = compose.get("services", {}).get("prometheus", {})
+    command = prom_svc.get("command", [])
+    if isinstance(command, str):
+        command = command.split()
+    assert any("--web.enable-remote-write-receiver" in arg for arg in command), (
+        "Prometheus command does not enable remote write receiver"
+    )
+
+
+def test_blackbox_jobs_use_file_sd_with_vantage():
+    assert PROMETHEUS_YML.exists()
+    with open(PROMETHEUS_YML, "r", encoding="utf-8") as f:
+        prom_cfg = yaml.safe_load(f)
+    scrape_configs = {
+        job["job_name"]: job for job in prom_cfg.get("scrape_configs", [])
+    }
+    assert "blackbox_icmp" in scrape_configs, (
+        "blackbox_icmp job missing in prometheus.yml"
+    )
+    assert "blackbox_ssh" in scrape_configs, (
+        "blackbox_ssh job missing in prometheus.yml"
+    )
+
+    for job_name in ["blackbox_icmp", "blackbox_ssh"]:
+        job = scrape_configs[job_name]
+        file_sds = job.get("file_sd_configs", [])
+        files = [f for sd in file_sds for f in sd.get("files", [])]
+        assert any("targets/sites.yml" in f for f in files), (
+            f"{job_name} does not reference targets/sites.yml in file_sd_configs"
+        )
+        relabel = job.get("relabel_configs", [])
+        vantage_set = any(
+            r.get("target_label") == "vantage" and r.get("replacement") == "jammy-obs"
+            for r in relabel
+        )
+        assert vantage_set, f"{job_name} relabel_configs does not set vantage=jammy-obs"
+
+
+def test_sites_targets_exact():
+    assert SITES_YML.exists()
+    with open(SITES_YML, "r", encoding="utf-8") as f:
+        sites_cfg = yaml.safe_load(f)
+    assert isinstance(sites_cfg, list)
+
+    sites_found = set()
+    targets_found = set()
+    for entry in sites_cfg:
+        labels = entry.get("labels", {})
+        if "site" in labels:
+            sites_found.add(labels["site"])
+        for t in entry.get("targets", []):
+            targets_found.add(t)
+
+    assert sites_found == {"jammy-a", "jammy-b", "jammy-c"}, (
+        f"Sites mismatch: {sites_found}"
+    )
+    assert "jammy-a" in str(targets_found)
+    assert "jammy-b" in str(targets_found)
+    assert "jammy-c" in str(targets_found)
+
+
+def test_alertmanager_discord_uses_file():
+    assert ALERTMANAGER_YML.exists()
+    with open(ALERTMANAGER_YML, "r", encoding="utf-8") as f:
+        am_cfg = yaml.safe_load(f)
+    receivers = am_cfg.get("receivers", [])
+    discord_receivers = [r for r in receivers if r.get("name") == "discord"]
+    assert len(discord_receivers) > 0, "No receiver named 'discord' in alertmanager.yml"
+
+    discord_cfg = discord_receivers[0].get("discord_configs", [])
+    assert len(discord_cfg) > 0, "No discord_configs in discord receiver"
+    for cfg in discord_cfg:
+        assert "webhook_url_file" in cfg, (
+            "discord_configs does not use webhook_url_file"
+        )
+        assert "/secrets/" in cfg["webhook_url_file"], (
+            "webhook_url_file does not point to secrets"
+        )
+
+
+def test_datasource_uids():
+    assert DATASOURCES_YAML.exists()
+    with open(DATASOURCES_YAML, "r", encoding="utf-8") as f:
+        ds_cfg = yaml.safe_load(f)
+    datasources = ds_cfg.get("datasources", [])
+    uids = {ds.get("uid") for ds in datasources}
+    expected_uids = {"prometheus", "loki", "tempo", "alertmanager"}
+    assert expected_uids.issubset(uids), f"Missing datasources: {expected_uids - uids}"
+
+
+def test_dashboard_has_site_variable_and_no_ips():
+    assert DASHBOARD_JSON.exists()
+    with open(DASHBOARD_JSON, "r", encoding="utf-8") as f:
+        dashboard = json.load(f)
+
+    assert dashboard.get("uid") == "jammy-noc", (
+        f"Dashboard uid is {dashboard.get('uid')}, expected jammy-noc"
+    )
+
+    variables = dashboard.get("templating", {}).get("list", [])
+    site_var = next((v for v in variables if v.get("name") == "site"), None)
+    assert site_var is not None, "Dashboard missing 'site' variable"
+    query = site_var.get("query", "")
+    if isinstance(query, dict):
+        query = query.get("query", "")
+    assert "label_values" in query and "site" in query, (
+        f"Unexpected site query: {query}"
+    )
+
+    dashboard_text = json.dumps(dashboard)
+    ipv4_pattern = re.compile(
+        r"\b(?!127\.0\.0\.1\b|0\.0\.0\.0\b)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b"
+    )
+    matches = ipv4_pattern.findall(dashboard_text)
+    assert not matches, f"Dashboard contains forbidden IP literals: {matches}"
