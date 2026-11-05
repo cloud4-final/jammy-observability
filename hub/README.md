@@ -68,15 +68,23 @@ Docker Compose 기반의 단일 노드 스택으로 동작하며, 모든 서비�
 ## 4. 배포 및 운영
 
 ### 배포 스크립트 실행
+SSH 기본 접속 사용자는 `yang`이며, 환경변수 `SSH_USER` 또는 `--ssh-user <user>` 옵션으로 변경할 수 있습니다.
+
 ```bash
 # 기본 배포 (jammy-obs 호스트로 rsync 및 compose up)
-./observability/hub/deploy.sh
+./hub/deploy.sh
 
 # 대상 호스트 지정 배포
-./observability/hub/deploy.sh --host jammy-obs
+./hub/deploy.sh --host jammy-obs
 
-# 데모 백엔드 및 모빌리티 수집기 포함 배포 (Task 4)
-./observability/hub/deploy.sh --demo
+# SSH 사용자 지정 배포
+./hub/deploy.sh --ssh-user yang
+
+# 데모 백엔드 및 모빌리티 수집기 포함 배포 (로컬 소스 지정)
+./hub/deploy.sh --demo --collector-src ../jammy-collector
+
+# 데모 백엔드 원격 이미지 지정 배포 (COLLECTOR_IMAGE 환경변수 사용 시 docker pull)
+COLLECTOR_IMAGE="myregistry/jammy-collector:v1.0" ./hub/deploy.sh --demo
 ```
 
 ### 배포 후 상태 점검 및 검증

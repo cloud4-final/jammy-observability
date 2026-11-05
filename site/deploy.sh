@@ -6,11 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
   cat <<'EOF'
-Usage: deploy.sh <jammy-a|jammy-b|jammy-c> [--apply]
+Usage: deploy.sh <jammy-a|jammy-b|jammy-c> [--apply] [--ssh-user <user>]
 
 Arguments:
-  <site>     Target site host name (jammy-a, jammy-b, or jammy-c) [Required]
-  --apply    Apply installation on target host (defaults to --dry-run without this flag)
+  <site>              Target site host name (jammy-a, jammy-b, or jammy-c) [Required]
+  --apply             Apply installation on target host (defaults to --dry-run without this flag)
+  --ssh-user <user>   SSH user for remote connection (default: yang or $SSH_USER)
 EOF
 }
 
@@ -34,10 +35,21 @@ case "$TARGET_SITE" in
 esac
 
 APPLY=false
+SSH_USER="${SSH_USER:-yang}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --apply)
       APPLY=true
+      shift
+      ;;
+    --ssh-user)
+      if [ $# -lt 2 ]; then
+        echo "Error: --ssh-user requires an argument" >&2
+        usage >&2
+        exit 2
+      fi
+      SSH_USER="$2"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -49,7 +61,6 @@ while [ $# -gt 0 ]; do
       exit 2
       ;;
   esac
-  shift
 done
 
 INSTALL_OPTS=("--site" "$TARGET_SITE")
@@ -63,16 +74,17 @@ BUNDLE_TAR=$(mktemp /tmp/jammy-obs-agent-bundle.XXXXXX.tar.gz)
 trap 'rm -f "$BUNDLE_TAR"' EXIT
 
 echo "Archiving site bundle from ${SCRIPT_DIR}..."
-tar -czf "$BUNDLE_TAR" -C "$SCRIPT_DIR" .
+COPYFILE_DISABLE=1 tar -czf "$BUNDLE_TAR" -C "$SCRIPT_DIR" .
 
 REMOTE_ARCHIVE="/tmp/jammy-obs-agent-bundle.tar.gz"
 REMOTE_EXTRACT_DIR="/tmp/jammy-obs-agent"
+REMOTE_TARGET="${SSH_USER}@${TARGET_SITE}"
 
-echo "Copying bundle to ${TARGET_SITE}:${REMOTE_ARCHIVE}..."
-scp "$BUNDLE_TAR" "${TARGET_SITE}:${REMOTE_ARCHIVE}"
+echo "Copying bundle to ${REMOTE_TARGET}:${REMOTE_ARCHIVE}..."
+scp "$BUNDLE_TAR" "${REMOTE_TARGET}:${REMOTE_ARCHIVE}"
 
-echo "Executing install.sh on ${TARGET_SITE}..."
+echo "Executing install.sh on ${REMOTE_TARGET}..."
 # shellcheck disable=SC2029
-ssh "$TARGET_SITE" "mkdir -p '${REMOTE_EXTRACT_DIR}' && tar -xzf '${REMOTE_ARCHIVE}' -C '${REMOTE_EXTRACT_DIR}' && sudo bash '${REMOTE_EXTRACT_DIR}/install.sh' ${INSTALL_OPTS[*]} && rm -rf '${REMOTE_EXTRACT_DIR}' '${REMOTE_ARCHIVE}'"
+ssh "${REMOTE_TARGET}" "mkdir -p '${REMOTE_EXTRACT_DIR}' && tar -xzf '${REMOTE_ARCHIVE}' -C '${REMOTE_EXTRACT_DIR}' && sudo bash '${REMOTE_EXTRACT_DIR}/install.sh' ${INSTALL_OPTS[*]} && rm -rf '${REMOTE_EXTRACT_DIR}' '${REMOTE_ARCHIVE}'"
 
 echo "Deploy command finished for ${TARGET_SITE}."

@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-SITE_DIR = REPO_ROOT / "observability" / "site"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SITE_DIR = REPO_ROOT / "site"
 INSTALL_SH = SITE_DIR / "install.sh"
 SYSTEMD_DIR = SITE_DIR / "systemd"
 VERSIONS_ENV = SITE_DIR / "versions.env"
@@ -258,4 +258,4 @@ def test_readme_libvirt_guidance():
     assert readme_path.exists()
     readme_content = readme_path.read_text(encoding="utf-8")
     assert "curl -s 127.0.0.1:9177/metrics | grep libvirt_up" in readme_content
-    assert "coordinator" in readme_content
+    assert "libvirt-sock-ro" in readme_content

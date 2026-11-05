@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r tests/requirements.txt
+
+      - name: Run pytest
+        run: pytest -q tests
+
+      - name: Validate Prometheus configs and rules
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD:/work" -w /work prom/prometheus:v3.13.5 check config hub/prometheus/prometheus.yml
+          docker run --rm --entrypoint promtool -v "$PWD:/work" -w /work prom/prometheus:v3.13.5 check rules alerts/rules.yml
+          docker run --rm --entrypoint promtool -v "$PWD:/work" -w /work prom/prometheus:v3.13.5 test rules alerts/rules.test.yml
+
+      - name: Validate Alertmanager config
+        run: |
+          docker run --rm --entrypoint amtool -v "$PWD:/work" -w /work prom/alertmanager:v0.34.2 check-config hub/alertmanager/alertmanager.yml
+
+      - name: Validate Docker Compose specification
+        run: docker compose -f hub/compose.yaml config --quiet
+
+      - name: Render and validate site agent bundle
+        run: |
+          RENDER_DIR=$(mktemp -d)
+          bash site/install.sh --site jammy-a --render-only "$RENDER_DIR"
+          docker run --rm -v "$RENDER_DIR/etc:/etc-test" grafana/alloy:v1.21.3 validate /etc-test/config.alloy
+          docker run --rm --entrypoint promtool -v "$RENDER_DIR/etc:/etc-test" prom/prometheus:v3.13.5 check config --syntax-only /etc-test/prometheus.yml
+          rm -rf "$RENDER_DIR"
+
+      - name: Run shellcheck
+        run: shellcheck hub/*.sh site/*.sh

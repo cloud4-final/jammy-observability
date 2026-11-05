@@ -3,8 +3,6 @@
 거점 Host(`jammy-a`, `jammy-b`, `jammy-c`)에 배포되는 관측 에이전트 번들입니다.
 중앙 관측 허브(`jammy-obs`)로 호스트 메트릭, 로그(journald), OTLP 트레이스 데이터를 전송하며, 로컬 48시간 시계열 보관 및 Tailscale 네트워크 장애 시 큐잉을 지원합니다.
 
-> **주의:** 팀원 망분리 작업 중이므로 현재 거점 호스트(`jammy-a`, `jammy-b`, `jammy-c`) 실서버 설치는 보류 상태입니다. 본 번들은 로컬 렌더링 및 일회용 컨테이너 검증만 수행합니다.
-
 ---
 
 ## 1. 구성 요소 및 포트 구성
@@ -21,11 +19,11 @@
 
 > **중요 안내 (libvirt exporter 권한 및 검증):**
 > 패키지 unit은 `User=prometheus`로 구동되므로 Host 그룹 변경 없이 읽기 전용 소켓(`ARGS="--web.listen-address=127.0.0.1:9177 --libvirt.uri=qemu:///system?socket=/var/run/libvirt/libvirt-sock-ro"`)을 사용합니다.
-> 거점 적용 시 `curl -s 127.0.0.1:9177/metrics | grep libvirt_up` 확인, 실패하면 coordinator 보고(그룹 변경은 승인 사항).
+> 설치 후 `curl -s 127.0.0.1:9177/metrics | grep libvirt_up`로 확인하며, 실패 시 libvirt 읽기 전용 소켓 권한을 점검합니다.
 
 > **중요 안내 (OTLP 수신 포트 바인딩):**
 > 현재 Alloy의 OTLP 수신 포트(`4317`, `4318`)는 `127.0.0.1` 루프백에만 바인드되어 있습니다.
-> 추후 거점 K8s(k3s) Pod에서 발생하는 애플리케이션 트레이스를 호스트 Alloy로 직접 수집하기 위한 `br-vm` 가상 브릿지 인터페이스 바인딩은 인프라/방화벽 담당 팀원과의 네트워크 보안 정책 합의 후 별도로 전환합니다.
+> 거점 K8s(k3s) Pod에서 발생하는 애플리케이션 트레이스를 호스트 Alloy로 직접 수집하기 위해 `br-vm` 가상 브릿지 인터페이스 바인딩이 필요할 경우 네트워크 보안 정책에 따라 별도로 전환합니다.
 
 ---
 

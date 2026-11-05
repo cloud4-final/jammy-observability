@@ -3,9 +3,9 @@ from pathlib import Path
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-COMPOSE_PATH = REPO_ROOT / "observability" / "hub" / "compose.yaml"
-HUB_DIR = REPO_ROOT / "observability" / "hub"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+COMPOSE_PATH = REPO_ROOT / "hub" / "compose.yaml"
+HUB_DIR = REPO_ROOT / "hub"
 
 EXPECTED_SERVICES = {
     "prometheus",
