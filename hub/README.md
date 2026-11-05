@@ -70,13 +70,13 @@ Docker Compose 기반의 단일 노드 스택으로 동작하며, 모든 서비�
 ### 배포 스크립트 실행
 ```bash
 # 기본 배포 (jammy-obs 호스트로 rsync 및 compose up)
-./observability/hub/deploy.sh
+./hub/deploy.sh
 
 # 대상 호스트 지정 배포
-./observability/hub/deploy.sh --host jammy-obs
+./hub/deploy.sh --host jammy-obs
 
 # 데모 백엔드 및 모빌리티 수집기 포함 배포 (Task 4)
-./observability/hub/deploy.sh --demo
+./hub/deploy.sh --demo
 ```
 
 ### 배포 후 상태 점검 및 검증

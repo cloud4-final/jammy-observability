@@ -1,88 +1,62 @@
-# Observability Architecture & Metrics Taxonomy
+# Jammy Observability Stack
 
-3거점 하이브리드 모빌리티 데이터 플랫폼의 관측성(Metrics, Logs, Alerts) 표준 및 자동 발견 설계입니다.
-
----
-
-## 1. 관측 계층 및 수집 구조
-
-```text
-[ Physical Host ]
-  ├── node_exporter (Host CPU, RAM, Disk, NIC)
-  └── libvirt_exporter (KVM 통신: VM 생성·삭제·자원 사용량 자동 감지)
-        │
-        ├── [ Control Plane VM ] ── node_exporter
-        ├── [ Application VM ]   ── node_exporter + k3s (kubelet/cAdvisor)
-        │                             └── Application Pods (/metrics)
-        └── [ Data VM ]          ── node_exporter + postgres_exporter
-                                      │
-                                      ▼
-                      [ Site Collector (Alloy / Prometheus Agent) ]
-                             (로컬 디스크 버퍼 / WAL 보존)
-                                      │
-                            Tailscale Mesh VPN
-                                      │
-                                      ▼
-                      [ Central Hub (32GB Observability PC) ]
-                         - Prometheus (Metrics Storage & Alerting)
-                         - Loki (Log Aggregation)
-                         - Grafana (Integrated Dashboard)
-                         - Alertmanager -> Discord
-```
+3거점 하이브리드 모빌리티 데이터 플랫폼을 위한 중앙 집중식 관측성(Metrics, Logs, Traces, Alerts) 스택입니다.
 
 ---
 
-## 2. 자동 발견 (Auto-Discovery) 전략
+## 1. 저장소 구성
 
-수동 대상 등록을 완전히 제거하기 위해 3개 레벨에서 자동 발견을 수행합니다.
-
-### A. KVM VM 레벨 (libvirt_exporter)
-- 호스트의 `/var/run/libvirt/libvirt-sock`을 마운트하여 실행.
-- 신규 VM이 생성되거나 삭제될 때 별도 설정 변경 없이 `libvirt_domain_info_virtual_cpus`, `libvirt_domain_block_stats_*` 메트릭이 동적으로 수집됩니다.
-
-### B. VM OS 레벨 (file_sd / Consul / Tailscale DNS)
-- 각 VM 프로비저닝 시 cloud-init / Ansible을 통해 `node_exporter`를 9100 포트로 자동 기동.
-- Site Collector는 `file_sd_configs` 또는 거점 내부 DNS/DHCP 리스트를 통해 신규 VM을 탐지합니다.
-
-### C. Kubernetes & Container 레벨 (k8s Service Discovery)
-- k3s 클러스터 내부에서는 Prometheus의 `kubernetes_sd_configs`를 활용합니다.
-- `role: pod`를 설정하여 Pod 어노테이션 기반 자동 수집:
-  ```yaml
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8000"
-    prometheus.io/path: "/metrics"
-  ```
-- Deployment 파드가 스케일 아웃되거나 재시작되어도 즉시 자동 수집됩니다.
+- `hub/`: 중앙 관측 허브 (`jammy-obs` 호스트 배포 스택: Prometheus, Alertmanager, Loki, Tempo, Grafana, Blackbox Exporter, Node Exporter, Demo Collector)
+- `site/`: 물리 거점 호스트(`jammy-a`, `jammy-b`, `jammy-c`) 에이전트 번들 (Prometheus Agent, Grafana Alloy, Node Exporter, Blackbox Exporter)
+- `alerts/`: Prometheus 경보 및 레코딩 규칙 정의와 단위 테스트 (`rules.yml`, `rules.test.yml`)
+- `tests/`: 관측 스택 설정, Docker Compose 명세, 거점 에이전트 렌더링 검증 자동화 테스트 (`pytest`)
 
 ---
 
-## 3. 메트릭 레이블 표준 (Label Governance)
+## 2. 메트릭 레이블 규약 (Label Governance)
 
 카디널리티 폭증 방지 및 다차원 필터링을 위한 공통 레이블 규약입니다.
 
 | Label 키 | 허용 값 예시 | 설명 |
 |---|---|---|
-| `site` | `site-a`, `site-b`, `site-c`, `aws`, `central` | 거점 식별자 |
-| `layer` | `host`, `vm`, `k8s-node`, `pod`, `app` | 인프라 계층 구분 |
-| `role` | `control-plane`, `app`, `db`, `edge`, `collector` | 노드 역할 |
-| `service` | `mobility-collector`, `snapshot-query`, `haproxy` | 서비스 식별자 |
+| `site` | `jammy-a`, `jammy-b`, `jammy-c`, `jammy-obs` | 호스트 및 거점 식별자 |
+| `layer` | `host`, `vm`, `k8s-node`, `pod`, `app` | 인프라 및 애플리케이션 계층 구분 |
+| `vantage` | `jammy-obs`, `jammy-a`, `jammy-b`, `jammy-c` (또는 빈 문자열 `""`) | 외부 프로브 관측 시점 (vantage=""는 로컬/거점 수집 메트릭) |
+| `target_site` | `jammy-a`, `jammy-b`, `jammy-c` | 블랙박스 프로브 대상 거점 식별자 |
 
 > **⚠️ 카디널리티 주의 규칙**:
-> `event_id`, `vehicle_id`, 사용자 세션 ID 등 고유 식별자는 Prometheus 메트릭 Label에 절대 포함하지 않습니다. (고유 식별자는 Loki 구조화 로그로만 추적)
+> `event_id`, `vehicle_id`, `trace_id` 등 고유 식별자는 Prometheus 메트릭 레이블에 절대 포함하지 않습니다. (고유 식별자는 Loki 구조화 로그 및 Tempo 분산 추적으로만 추적)
 
 ---
 
-## 4. 거점 단절 vs 서버 장애 감지 규칙
+## 3. 빠른 시작 (Quick Start)
 
-거점 회선 단절(Tailscale 또는 인터넷 장애)과 개별 서버 하드웨어 장애를 분리 감지합니다.
+### 3.1 중앙 허브 배포
+```bash
+# 기본 중앙 허브 배포
+./hub/deploy.sh
 
-1. **거점 회선 단절 (`SitePartition`)**:
-   - 중앙 허브에서 특정 거점의 Site Collector 및 모든 타겟이 동시에 응답하지 않을 때 발생.
-   - 조치: Tailscale 터널 및 회선 점검.
-2. **개별 서버 장애 (`TargetDown`)**:
-   - 거점 Site Collector는 정상 통신 중이나, 특정 VM의 `up == 0` 상태가 1분 이상 지속될 때 발생.
-   - 조치: KVM 도메인 및 해당 VM 프로세스 점검.
-3. **단절 시 데이터 보존 (Local WAL Buffer)**:
-   - 각 거점의 Site Collector는 최소 4시간 분량의 WAL을 로컬 디스크에 버퍼링합니다.
-   - 회선 복구 시 누락된 메트릭을 중앙 Prometheus에 `remote_write`로 안전하게 백필합니다.
+# 데모 백엔드 포함 배포 (로컬 체크아웃 소스 기반)
+./hub/deploy.sh --demo --collector-src ../jammy-collector
+```
+
+### 3.2 Smoke E2E 검증
+```bash
+# 중앙 허브에서 메트릭, 로그, 트레이스 4종 왕복 검증
+ssh yang@jammy-obs bash /opt/jammy-obs/stack/hub/smoke.sh
+```
+
+### 3.3 Grafana 대시보드 터널링
+Tailnet 보안 정책(스택 포트 직접 노출 차단)에 따라 SSH 로컬 포트 포워딩으로 접근합니다:
+```bash
+ssh -L 3000:127.0.0.1:3000 yang@jammy-obs
+```
+터널 수립 후 웹 브라우저에서 `http://localhost:3000`에 접속합니다.
+(초기 관리자 계정: `admin`, 암호: `jammy-obs` 호스트의 `/opt/jammy-obs/secrets/grafana_admin_password`)
+
+---
+
+## 4. 관련 저장소 (Related Repositories)
+
+- 모빌리티 이벤트 수집 백엔드: [cloud4-final/jammy-collector](https://github.com/cloud4-final/jammy-collector)
+- 상위 모노레포: [cloud4-final/hybrid-5th](https://github.com/cloud4-final/hybrid-5th)
