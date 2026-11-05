@@ -1,14 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: deploy.sh [OPTIONS]
+
+Options:
+  --host <hostname>       Target host DNS/IP (default: jammy-obs)
+  --demo                  Deploy demo backend services
+  --collector-src <path>  Path to collector source for local build
+  --ssh-user <user>       SSH user for remote connection (default: yang or $SSH_USER)
+  --print-plan            Print resolved deployment plan without connecting
+  -h, --help              Show this help message
+EOF
+}
+
 HOST="jammy-obs"
 DEMO=false
 COLLECTOR_SRC=""
 SSH_USER="${SSH_USER:-yang}"
+PRINT_PLAN=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --host)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --host requires an argument" >&2
+        usage >&2
+        exit 2
+      fi
       HOST="$2"
       shift 2
       ;;
@@ -17,20 +37,35 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --collector-src)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --collector-src requires an argument" >&2
+        usage >&2
+        exit 2
+      fi
       COLLECTOR_SRC="$2"
       shift 2
       ;;
     --ssh-user)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --ssh-user requires an argument" >&2
+        usage >&2
+        exit 2
+      fi
       SSH_USER="$2"
       shift 2
       ;;
+    --print-plan)
+      PRINT_PLAN=true
+      shift
+      ;;
     -h|--help)
-      echo "Usage: $0 [--host <hostname>] [--demo] [--collector-src <path>] [--ssh-user <user>]"
+      usage
       exit 0
       ;;
     *)
-      echo "Unknown option: $1" >&2
-      exit 1
+      echo "Error: Unknown option '$1'" >&2
+      usage >&2
+      exit 2
       ;;
   esac
 done
@@ -40,25 +75,40 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REMOTE_USER="${SSH_USER}"
 REMOTE_TARGET="${REMOTE_USER}@${HOST}"
 STACK_ROOT="/opt/jammy-obs"
+DEPLOY_IMAGE=""
 
 if [[ "${DEMO}" == "true" ]]; then
-  if [[ -z "${COLLECTOR_SRC}" && -d "${REPO_ROOT}/../jammy-collector" ]]; then
-    COLLECTOR_SRC="${REPO_ROOT}/../jammy-collector"
-  fi
-
-  if [[ -n "${COLLECTOR_SRC}" && ! -d "${COLLECTOR_SRC}" ]]; then
-    echo "Error: Collector source directory does not exist: ${COLLECTOR_SRC}" >&2
-    exit 1
-  fi
-
   if [[ -n "${COLLECTOR_SRC}" ]]; then
-    echo "Using collector source: ${COLLECTOR_SRC}"
+    if [[ ! -d "${COLLECTOR_SRC}" ]]; then
+      echo "Error: Collector source directory does not exist: ${COLLECTOR_SRC}" >&2
+      exit 1
+    fi
+    COLLECTOR_SRC="$(cd "${COLLECTOR_SRC}" && pwd)"
+    DEPLOY_IMAGE="jammy-collector:local"
   elif [[ -n "${COLLECTOR_IMAGE:-}" ]]; then
-    echo "Using COLLECTOR_IMAGE: ${COLLECTOR_IMAGE}"
+    DEPLOY_IMAGE="${COLLECTOR_IMAGE}"
+  elif [[ -d "${REPO_ROOT}/../jammy-collector" ]]; then
+    COLLECTOR_SRC="$(cd "${REPO_ROOT}/../jammy-collector" && pwd)"
+    DEPLOY_IMAGE="jammy-collector:local"
   else
     echo "Error: Demo mode requires either --collector-src <path> (or default ${REPO_ROOT}/../jammy-collector) or COLLECTOR_IMAGE environment variable." >&2
     exit 1
   fi
+
+  if [[ -n "${COLLECTOR_SRC}" ]]; then
+    echo "Using collector source: ${COLLECTOR_SRC} (deploy image: ${DEPLOY_IMAGE})"
+  else
+    echo "Using COLLECTOR_IMAGE: ${DEPLOY_IMAGE}"
+  fi
+fi
+
+if [[ "${PRINT_PLAN}" == "true" ]]; then
+  echo "HOST=${HOST}"
+  echo "SSH_USER=${SSH_USER}"
+  echo "DEMO=${DEMO}"
+  echo "COLLECTOR_SRC=${COLLECTOR_SRC}"
+  echo "DEPLOY_IMAGE=${DEPLOY_IMAGE}"
+  exit 0
 fi
 
 echo "=== [1/5] Preparing remote directories on ${HOST} ==="
@@ -130,9 +180,9 @@ EOF
 set -euo pipefail
 docker build -t jammy-collector:local "$1/stack/collector-src"
 EOF
-  elif [[ -n "${COLLECTOR_IMAGE:-}" ]]; then
-    echo "Pulling collector image on ${HOST}: ${COLLECTOR_IMAGE}..."
-    ssh "${REMOTE_TARGET}" bash -s -- "${COLLECTOR_IMAGE}" << 'EOF'
+  elif [[ -n "${DEPLOY_IMAGE}" ]]; then
+    echo "Pulling collector image on ${HOST}: ${DEPLOY_IMAGE}..."
+    ssh "${REMOTE_TARGET}" bash -s -- "${DEPLOY_IMAGE}" << 'EOF'
 set -euo pipefail
 docker pull "$1"
 EOF
@@ -163,7 +213,7 @@ fi
 
 echo "=== [4/5] Deploying Docker Compose stack on ${HOST} ==="
 if [[ "${DEMO}" == "true" ]]; then
-  ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" "${COLLECTOR_IMAGE:-jammy-collector:local}" << 'EOF'
+  ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" "${DEPLOY_IMAGE}" << 'EOF'
 set -euo pipefail
 target_root="$1"
 collector_image="$2"
