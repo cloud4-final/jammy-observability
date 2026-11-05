@@ -708,7 +708,7 @@
           },
           "editorMode": "code",
           "expr": "rate(libvirt_domain_block_stats_read_bytes_total{site=~\"$site\",domain=~\"$domain\"}[$__rate_interval])",
-          "legendFormat": "{{site}} - {{domain}} read",
+          "legendFormat": "{{site}} - {{domain}} ({{target_device}}) read",
           "range": true,
           "refId": "A"
         },
@@ -719,7 +719,7 @@
           },
           "editorMode": "code",
           "expr": "rate(libvirt_domain_block_stats_write_bytes_total{site=~\"$site\",domain=~\"$domain\"}[$__rate_interval])",
-          "legendFormat": "{{site}} - {{domain}} write",
+          "legendFormat": "{{site}} - {{domain}} ({{target_device}}) write",
           "range": true,
           "refId": "B"
         }
@@ -888,7 +888,7 @@
         "current": {
           "selected": true,
           "text": "All",
-          "value": ""
+          "value": "$__all"
         },
         "datasource": {
           "type": "prometheus",
@@ -916,13 +916,13 @@
         "current": {
           "selected": true,
           "text": "All",
-          "value": ""
+          "value": "$__all"
         },
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(libvirt_domain_state_code{site=~\"\"}, domain)",
+        "definition": "label_values(libvirt_domain_state_code{site=~\"$site\"}, domain)",
         "hide": 0,
         "includeAll": true,
         "label": "Domain",
@@ -930,7 +930,7 @@
         "name": "domain",
         "options": [],
         "query": {
-          "query": "label_values(libvirt_domain_state_code{site=~\"\"}, domain)",
+          "query": "label_values(libvirt_domain_state_code{site=~\"$site\"}, domain)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

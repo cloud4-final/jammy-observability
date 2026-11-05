@@ -111,6 +111,72 @@ def test_dashboards_site_variable_exists():
         assert "site" in str(query), f"Dashboard {filename} '$site' variable query does not reference site: {query}"
 
 
+def test_dashboards_variables_validity():
+    """모든 대시보드의 query 변수에 빈 정규식(=~"") 금지, current.value 비어있지 않음 검증."""
+    dashboards = _load_dashboards()
+    for filename, data in dashboards.items():
+        variables = data.get("templating", {}).get("list", [])
+        for v in variables:
+            v_name = v.get("name")
+            current = v.get("current", {})
+            val = current.get("value")
+            assert val not in (None, ""), (
+                f"Dashboard {filename} variable '${v_name}' has empty current.value"
+            )
+            if v.get("includeAll") and current.get("text") == "All":
+                assert val == "$__all", (
+                    f"Dashboard {filename} variable '${v_name}' with 'All' must have current.value '$__all', got {val!r}"
+                )
+
+            if v.get("type") == "query":
+                q_raw = v.get("query", "")
+                q_str = q_raw.get("query", "") if isinstance(q_raw, dict) else str(q_raw)
+                assert not re.search(r'=~""|!~""', q_str), (
+                    f"Dashboard {filename} variable '${v_name}' query contains empty regex: {q_str}"
+                )
+                definition = str(v.get("definition", ""))
+                assert not re.search(r'=~""|!~""', definition), (
+                    f"Dashboard {filename} variable '${v_name}' definition contains empty regex: {definition}"
+                )
+
+
+def test_jammy_vms_domain_variable_and_site_dependency():
+    """jammy-vms의 $domain 변수 검증 및 $site 의존 변수의 $site 참조 검증."""
+    dashboards = _load_dashboards()
+    vms_data = dashboards["jammy-vms.json"]
+    variables = vms_data.get("templating", {}).get("list", [])
+    domain_var = next((v for v in variables if v.get("name") == "domain"), None)
+    assert domain_var is not None, "jammy-vms.json missing '$domain' variable"
+
+    q_raw = domain_var.get("query", "")
+    q_str = q_raw.get("query", "") if isinstance(q_raw, dict) else str(q_raw)
+    definition = str(domain_var.get("definition", ""))
+
+    assert 'site=~"$site"' in q_str, (
+        f"jammy-vms $domain query must reference $site via site=~\"$site\": {q_str}"
+    )
+    assert 'site=~"$site"' in definition, (
+        f"jammy-vms $domain definition must reference $site via site=~\"$site\": {definition}"
+    )
+
+
+def test_jammy_vms_disk_throughput_legend_device():
+    """jammy-vms 디스크 I/O 패널 범례에 {{target_device}} 포함 검증."""
+    dashboards = _load_dashboards()
+    vms_data = dashboards["jammy-vms.json"]
+    disk_panels = [
+        p for p in vms_data.get("panels", [])
+        if "disk throughput" in p.get("title", "").lower()
+    ]
+    assert len(disk_panels) >= 1, "VM Disk Throughput panel not found in jammy-vms.json"
+    for p in disk_panels:
+        for t in p.get("targets", []):
+            legend = t.get("legendFormat", "")
+            assert "{{target_device}}" in legend, (
+                f"Panel '{p.get('title')}' target legendFormat missing '{{{{target_device}}}}': {legend}"
+            )
+
+
 def test_jammy_network_matrix_uses_vantage_and_target_site():
     dashboards = _load_dashboards()
     network_db = dashboards["jammy-network.json"]

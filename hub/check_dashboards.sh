@@ -55,17 +55,19 @@ DASHBOARDS=("jammy-noc" "jammy-network" "jammy-vms" "jammy-app")
 
 echo "=== Verifying 4 Live Dashboards via Grafana API ==="
 
+FAIL_COUNT=0
 for uid in "${DASHBOARDS[@]}"; do
   url="${GRAFANA_URL}/api/dashboards/uid/${uid}"
   resp=$(curl -s -f -u "${ADMIN_USER}:${ADMIN_PASSWORD}" "${url}" || echo "")
   if [[ -z "${resp}" ]]; then
     echo "ERROR: Failed to fetch dashboard UID: ${uid} from ${url}" >&2
-    exit 1
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+    continue
   fi
 
   # shellcheck disable=SC2016
-  python3 -c '
-import sys, json, urllib.request, urllib.parse
+  if ! python3 -c '
+import sys, json, re, urllib.request, urllib.parse
 
 prom_url = sys.argv[1]
 loki_url = sys.argv[2]
@@ -81,6 +83,63 @@ dashboard = payload.get("dashboard", {})
 title = dashboard.get("title", "Untitled")
 uid = dashboard.get("uid", "")
 print(f"\n--- [{title}] (UID: {uid}) ---")
+
+has_error = False
+
+# 1. Verify template variables
+variables = dashboard.get("templating", {}).get("list", [])
+var_map = {}
+for v in variables:
+    v_name = v.get("name", "")
+    v_type = v.get("type", "")
+    current = v.get("current", {})
+    cur_val = current.get("value")
+    all_val = v.get("allValue") or ".*"
+
+    if cur_val in (None, ""):
+        print(f"  Variable ${v_name}: ERROR (current.value is empty)")
+        has_error = True
+        continue
+
+    effective_val = all_val if cur_val == "$__all" else cur_val
+    var_map[f"${v_name}"] = effective_val
+
+    if v_type == "query":
+        q_raw = v.get("query", "")
+        q_str = q_raw.get("query", "") if isinstance(q_raw, dict) else str(q_raw)
+
+        if "=~\"\"" in q_str or "!~\"\"" in q_str or "=~\"\"" in str(v.get("definition", "")):
+            print(f"  Variable ${v_name} ({q_str}): ERROR (contains empty regex)")
+            has_error = True
+            continue
+
+        m = re.match(r"^label_values\((?:(.+),\s*)?([a-zA-Z_0-9]+)\)$", q_str.strip())
+        if m:
+            metric_selector, label_name = m.group(1), m.group(2)
+            if metric_selector:
+                for vk, vv in var_map.items():
+                    metric_selector = metric_selector.replace(vk, str(vv))
+                metric_selector = re.sub(r"\$[a-zA-Z_0-9]+", ".*", metric_selector)
+
+            params = {}
+            if metric_selector:
+                params["match[]"] = metric_selector
+            val_url = prom_url + f"/api/v1/label/{label_name}/values"
+            if params:
+                val_url += "?" + urllib.parse.urlencode(params)
+
+            try:
+                with urllib.request.urlopen(val_url, timeout=10) as r:
+                    res = json.loads(r.read()).get("data", [])
+                    cnt = len(res)
+                    if cnt > 0:
+                        print(f"  Variable ${v_name}: {cnt} values")
+                    else:
+                        print(f"  Variable ${v_name} ({q_str}): EMPTY (0 values returned)")
+                        has_error = True
+            except Exception as e:
+                print(f"  Variable ${v_name} ({q_str}): ERROR ({e})")
+                has_error = True
 
 panels = dashboard.get("panels", [])
 for p in panels:
@@ -118,7 +177,10 @@ for p in panels:
                 print(f"  {target_label}: EMPTY (empty expression)")
             continue
 
-        expr = raw_expr.replace("$site", ".*").replace("$domain", ".*")
+        expr = raw_expr
+        for vk, vv in var_map.items():
+            expr = expr.replace(vk, str(vv))
+        expr = expr.replace("$site", ".*").replace("$domain", ".*")
         expr = expr.replace("$__rate_interval", "2m").replace("$__interval", "2m").replace("$__range", "1h")
 
         if ds_uid == "loki":
@@ -136,6 +198,7 @@ for p in panels:
                         print(f"  {target_label}: EMPTY")
             except Exception as e:
                 print(f"  {target_label}: ERROR ({e})")
+                has_error = True
         elif ds_uid == "prometheus":
             q_url = prom_url + "/api/v1/query?" + urllib.parse.urlencode({"query": expr})
             try:
@@ -148,10 +211,21 @@ for p in panels:
                         print(f"  {target_label}: EMPTY")
             except Exception as e:
                 print(f"  {target_label}: ERROR ({e})")
+                has_error = True
         else:
             print(f"  {target_label}: SKIPPED (datasource: {ds_uid})")
-' "${PROMETHEUS_URL}" "${LOKI_URL}" <<< "${resp}"
+
+if has_error:
+    sys.exit(1)
+' "${PROMETHEUS_URL}" "${LOKI_URL}" <<< "${resp}"; then
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
 
 done
+
+if [[ "${FAIL_COUNT}" -gt 0 ]]; then
+  echo -e "\n❌ Dashboard verification failed (${FAIL_COUNT} dashboards had errors)." >&2
+  exit 1
+fi
 
 echo -e "\n✅ All live dashboard panels verified."

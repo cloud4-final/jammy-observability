@@ -480,7 +480,7 @@
         "current": {
           "selected": true,
           "text": "All",
-          "value": ""
+          "value": "$__all"
         },
         "datasource": {
           "type": "prometheus",
