@@ -186,3 +186,48 @@ def test_blackbox_has_net_raw():
             f"Service {name} should not have NET_RAW cap_add"
         )
 
+
+DEMO_SERVICES = {"demo-postgres", "demo-collector", "demo-alloy"}
+
+
+def test_demo_services_profiled():
+    compose = load_compose()
+    services = compose.get("services", {})
+    for svc_name in DEMO_SERVICES:
+        assert svc_name in services, f"Demo service {svc_name} missing from compose.yaml"
+        profiles = services[svc_name].get("profiles", [])
+        assert profiles == ["demo"], (
+            f"Service {svc_name} profiles mismatch: {profiles} != ['demo']"
+        )
+
+
+def test_demo_ports_loopback():
+    compose = load_compose()
+    services = compose.get("services", {})
+    for svc_name in DEMO_SERVICES:
+        assert svc_name in services, f"Demo service {svc_name} missing from compose.yaml"
+
+    pg_cmd = " ".join(services["demo-postgres"].get("command", []))
+    assert "listen_addresses=127.0.0.1" in pg_cmd, (
+        f"demo-postgres does not enforce listen_addresses=127.0.0.1: {pg_cmd}"
+    )
+
+    collector_cmd = " ".join(services["demo-collector"].get("command", []))
+    assert "--host 127.0.0.1" in collector_cmd or "127.0.0.1:8000" in collector_cmd, (
+        f"demo-collector does not bind to 127.0.0.1: {collector_cmd}"
+    )
+
+    alloy_cmd = " ".join(services["demo-alloy"].get("command", []))
+    assert "--server.http.listen-addr=127.0.0.1:12346" in alloy_cmd, (
+        f"demo-alloy does not bind HTTP to 127.0.0.1:12346: {alloy_cmd}"
+    )
+
+
+def test_demo_targets_default_empty():
+    demo_targets_file = HUB_DIR / "prometheus" / "targets" / "demo.yml"
+    assert demo_targets_file.exists(), f"{demo_targets_file} not found"
+    with open(demo_targets_file, "r", encoding="utf-8") as f:
+        targets = yaml.safe_load(f)
+    assert targets == [], f"demo.yml must default to [], got: {targets}"
+
+

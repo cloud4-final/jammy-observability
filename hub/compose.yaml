@@ -106,6 +106,78 @@ services:
     volumes:
       - /:/host:ro,rslave
 
+  demo-postgres:
+    profiles:
+      - demo
+    image: postgres:17.7
+    container_name: jammy-obs-demo-postgres
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - postgres
+      - -c
+      - listen_addresses=127.0.0.1
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/demo_pg_password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    secrets:
+      - demo_pg_password
+    volumes:
+      - ${OBS_ROOT:-/opt/jammy-obs}/data/demo-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  demo-collector:
+    profiles:
+      - demo
+    build: ../../apps/collector
+    container_name: jammy-obs-demo-collector
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      SITE_ID: jammy-obs
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
+    secrets:
+      - demo_pg_password
+    entrypoint:
+      - sh
+      - -c
+      - |
+        PG_PASS=$$(python3 -c "import urllib.parse; print(urllib.parse.quote_plus(open('/run/secrets/demo_pg_password').read().strip()))")
+        export DATABASE_URL="postgresql://postgres:$${PG_PASS}@127.0.0.1:5432/postgres"
+        exec "$$@"
+      - _
+    command:
+      - sh
+      - -c
+      - "python -m src.migrate && uvicorn src.main:app --host 127.0.0.1 --port 8000"
+    depends_on:
+      demo-postgres:
+        condition: service_healthy
+
+  demo-alloy:
+    profiles:
+      - demo
+    image: grafana/alloy:v1.21.3
+    container_name: jammy-obs-demo-alloy
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=127.0.0.1:12346
+      - --storage.path=/var/lib/alloy/data
+    volumes:
+      - ./demo/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
 secrets:
   grafana_admin_password:
     file: ${OBS_ROOT:-/opt/jammy-obs}/secrets/grafana_admin_password
+  demo_pg_password:
+    file: ${OBS_ROOT:-/opt/jammy-obs}/secrets/demo_pg_password
+

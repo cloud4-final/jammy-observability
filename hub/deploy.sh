@@ -77,8 +77,8 @@ target_root="$1"
 secrets_dir="${target_root}/secrets"
 if [[ ! -f "${secrets_dir}/demo_pg_password" ]]; then
   openssl rand -base64 16 > "${secrets_dir}/demo_pg_password"
-  chmod 600 "${secrets_dir}/demo_pg_password"
 fi
+chmod 644 "${secrets_dir}/demo_pg_password"
 mkdir -p "${target_root}/data/demo-postgres"
 EOF
   if [[ -d "${REPO_ROOT}/apps/collector" ]]; then
@@ -86,6 +86,7 @@ EOF
 set -euo pipefail
 target_root="$1"
 mkdir -p "${target_root}/stack/apps/collector"
+ln -sfn "${target_root}/stack/apps" "${target_root}/apps"
 EOF
     rsync -a --delete "${REPO_ROOT}/apps/collector/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/apps/collector/"
   fi
@@ -131,8 +132,9 @@ DEADLINE=$((SECONDS + 120))
 ALL_HEALTHY=false
 
 while [[ ${SECONDS} -lt ${DEADLINE} ]]; do
-  if ssh "${REMOTE_TARGET}" bash -s << 'EOF'
+  if ssh "${REMOTE_TARGET}" bash -s -- "${DEMO}" << 'EOF'
 set -e
+demo_mode="$1"
 check_endpoint() {
   local url="$1"
   local code
@@ -148,7 +150,12 @@ check_endpoint "http://127.0.0.1:9093/-/ready" && \
 check_endpoint "http://127.0.0.1:3100/ready" && \
 check_endpoint "http://127.0.0.1:3200/ready" && \
 check_endpoint "http://127.0.0.1:3000/api/health" && \
-check_endpoint "http://127.0.0.1:9115/-/healthy"
+check_endpoint "http://127.0.0.1:9115/-/healthy" || exit 1
+
+if [[ "${demo_mode}" == "true" ]]; then
+  check_endpoint "http://127.0.0.1:8000/healthz" && \
+  check_endpoint "http://127.0.0.1:8000/ready" || exit 1
+fi
 EOF
   then
     ALL_HEALTHY=true
