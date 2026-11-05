@@ -2,13 +2,17 @@
 
 ## 팀 기준 (hybrid-docs)
 
-- 작업 전 팀 통일값과 결정을 확인한다. 각 파일의 `## 요약`을 먼저 읽고, 작업과 관련된 섹션만 자세히 읽는다.
-  - https://raw.githubusercontent.com/cloud4-final/hybrid-docs/main/contracts.md
-  - https://raw.githubusercontent.com/cloud4-final/hybrid-docs/main/decisions.md
-- 작업이 위 기준과 어긋나면 진행 전에 사용자에게 알린다. 기준을 바꾸려면 팀 합의가 필요하다.
+- 평소에는 팀 기준 문서를 읽지 않는다. 아래 경우에만 관련 부분을 읽는다.
+  - 다른 파트와 함께 쓰는 값을 바꾸거나 새로 쓸 때: 버전, 포트, 주소, 이름, API, DB, label, 태그
+  - 코드, 문서, 사용자 설명이 서로 맞지 않을 때
+  - 사용자가 팀 기준 확인을 요청할 때
+- `contracts.md`는 분류별로 읽는다. 분류: NET(대역), ADDR(주소), PATH(통신 경로), NAME(이름·태그), API(collector API), DB, OBS(관측), AWS, AI.
+  `curl -sL https://raw.githubusercontent.com/cloud4-final/hybrid-docs/main/contracts.md | awk '/^##/{p=/^### C-(API|DB)-/} p'`
+- 결정의 이유가 필요하면 `decisions.md`를 읽는다: https://raw.githubusercontent.com/cloud4-final/hybrid-docs/main/decisions.md
+- 작업이 기준과 어긋나면 진행 전에 사용자에게 알린다. 기준을 바꾸려면 팀 합의가 필요하다.
 - 사용자가 요청하면 hybrid-docs 변경 PR을 만든다.
-  1. 임시 폴더에 clone한다: `gh repo clone cloud4-final/hybrid-docs "$(mktemp -d)/hybrid-docs"`
-  2. hybrid-docs `README.md`의 작성 규칙을 따른다. 바꾼 값과 `## 요약`을 함께 고치고, `decisions.md`의 해당 파트에 결정을 추가한다.
-  3. `gh pr create -R cloud4-final/hybrid-docs`로 PR을 연다.
+  1. `d="$(mktemp -d)" && gh repo clone cloud4-final/hybrid-docs "$d/hybrid-docs" && cd "$d/hybrid-docs" && git switch -c docs/<주제>`
+  2. hybrid-docs `README.md`의 작성 규칙을 따라 고친다.
+  3. commit하고 `git push -u origin HEAD` 후 `gh pr create -R cloud4-final/hybrid-docs`로 PR을 연다.
   4. 코드 PR 본문에 그 PR 링크를 적는다. 링크한 PR이 merge되기 전에는 `docs-link-check`가 실패한다.
-- PR을 올리기 전에 변경 diff를 셀프 리뷰한다. 확인할 것: 명백한 버그, 위 기준 위반, 테스트 누락.
+- PR을 올리기 전에 diff를 셀프 리뷰한다. 확인할 것: 팀 약속 위반, merge 후 장애, 코드 결함, 다른 파트가 함께 쓸 때 깨짐, 다른 파트도 고쳐야 하는 영향.
