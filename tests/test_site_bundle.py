@@ -258,4 +258,4 @@ def test_readme_libvirt_guidance():
     assert readme_path.exists()
     readme_content = readme_path.read_text(encoding="utf-8")
     assert "curl -s 127.0.0.1:9177/metrics | grep libvirt_up" in readme_content
-    assert "coordinator" in readme_content
+    assert "libvirt-sock-ro" in readme_content

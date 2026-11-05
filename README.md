@@ -32,12 +32,17 @@
 ## 3. 빠른 시작 (Quick Start)
 
 ### 3.1 중앙 허브 배포
+SSH 접속 기본 사용자는 `yang`이며, 환경변수 `SSH_USER` 또는 `--ssh-user <user>` 옵션으로 변경할 수 있습니다.
+
 ```bash
 # 기본 중앙 허브 배포
 ./hub/deploy.sh
 
 # 데모 백엔드 포함 배포 (로컬 체크아웃 소스 기반)
 ./hub/deploy.sh --demo --collector-src ../jammy-collector
+
+# 데모 백엔드 원격 이미지 지정 배포 (COLLECTOR_IMAGE 환경변수 활용)
+COLLECTOR_IMAGE="myregistry/jammy-collector:v1.0" ./hub/deploy.sh --demo
 ```
 
 ### 3.2 Smoke E2E 검증
