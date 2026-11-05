@@ -84,7 +84,9 @@ services:
     container_name: jammy-obs-blackbox
     restart: unless-stopped
     network_mode: host
-    user: "${OBS_UID:-1000}:${OBS_GID:-1000}"
+    user: "0:0"
+    cap_add:
+      - NET_RAW
     command:
       - --config.file=/etc/blackbox/blackbox.yml
       - --web.listen-address=127.0.0.1:9115

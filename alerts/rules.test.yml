@@ -59,3 +59,32 @@ tests:
       - eval_time: 15m
         alertname: SiteProbeDown
         exp_alerts: []
+
+  # Test Case (d): Regression - site telemetry missing while probe succeeds from jammy-obs
+  # Node exporter metrics stop after 15m, but blackbox icmp probe up and probe_success remain 1 throughout 30m.
+  # SiteTelemetryMissing must fire; SiteProbeDown must not fire.
+  - interval: 1m
+    input_series:
+      - series: 'up{site="jammy-b",instance="jammy-b:9100",job="node"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _'
+      - series: 'up{site="jammy-b",instance="jammy-b",job="blackbox_icmp",vantage="jammy-obs"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'probe_success{site="jammy-b",instance="jammy-b",job="blackbox_icmp",vantage="jammy-obs"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: SiteTelemetryMissing
+        exp_alerts: []
+      - eval_time: 27m
+        alertname: SiteTelemetryMissing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              site: jammy-b
+            exp_annotations:
+              summary: "Unknown: 데이터 없음(다운 확정 아님) - site: jammy-b"
+              description: "No scrape or remote_write metrics received from jammy-b for more than 10 minutes. Node might be isolated, down, or remote-write halted."
+      - eval_time: 27m
+        alertname: SiteProbeDown
+        exp_alerts: []
+

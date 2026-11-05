@@ -169,7 +169,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "time() - max by (site) (timestamp(up{site=~\"$site\"}))",
+          "expr": "time() - max by (site) (timestamp(up{site=~\"$site\",vantage=\"\"}))",
           "legendFormat": "{{site}}",
           "range": true,
           "refId": "A"

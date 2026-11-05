@@ -3,7 +3,7 @@ groups:
     rules:
       # 1. 개별 타겟 장애 (Site Collector는 정상인데 특정 VM/서비스만 죽었을 때)
       - alert: InstanceDown
-        expr: up == 0
+        expr: up{vantage=""} == 0
         for: 1m
         labels:
           severity: warning
@@ -13,7 +13,7 @@ groups:
 
       # 2. 거점 전체 단절 감지 (해당 거점의 모든 scrape 대상이 동시에 응답 없을 때)
       - alert: SiteNetworkPartition
-        expr: sum by (site) (up) == 0
+        expr: sum by (site) (up{vantage=""}) == 0
         for: 30s
         labels:
           severity: critical
@@ -46,7 +46,7 @@ groups:
 
       # 5. 거점 원격 전송 단절 (데이터 누락/침묵 상태 감지)
       - alert: SiteTelemetryMissing
-        expr: group by (site) (up{site=~"jammy-[abc]"} offset 10m) unless group by (site) (up{site=~"jammy-[abc]"})
+        expr: group by (site) (up{site=~"jammy-[abc]",vantage=""} offset 10m) unless group by (site) (up{site=~"jammy-[abc]",vantage=""})
         for: 2m
         labels:
           severity: warning

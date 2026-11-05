@@ -94,7 +94,7 @@ set -euo pipefail
 target_root="$1"
 cat << 'YAML' > "${target_root}/stack/hub/prometheus/targets/demo.yml"
 - targets:
-    - localhost:8000
+    - 127.0.0.1:8000
   labels:
     site: jammy-obs
     layer: app

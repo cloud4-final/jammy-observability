@@ -155,3 +155,34 @@ def test_no_plaintext_secrets():
                     or "/secrets/" in str(v)
                     or "/run/secrets/" in str(v)
                 ), f"Plaintext secret in service {name} env {k}={v}"
+
+
+def test_blackbox_has_net_raw():
+    compose = load_compose()
+    services = compose.get("services", {})
+    assert "blackbox" in services, "blackbox service missing from compose"
+
+    bbox = services["blackbox"]
+    assert bbox.get("user") == "0:0", (
+        f"blackbox user should be '0:0', got {bbox.get('user')}"
+    )
+    cap_add = bbox.get("cap_add", [])
+    assert "NET_RAW" in cap_add, (
+        f"blackbox missing NET_RAW capability in cap_add: {cap_add}"
+    )
+
+    base_services = {
+        name: svc
+        for name, svc in services.items()
+        if "profiles" not in svc and name != "blackbox"
+    }
+    for name, svc in base_services.items():
+        user = str(svc.get("user", ""))
+        assert "1000" in user, (
+            f"Service {name} expected user 1000, got: {user}"
+        )
+        caps = svc.get("cap_add", [])
+        assert "NET_RAW" not in caps, (
+            f"Service {name} should not have NET_RAW cap_add"
+        )
+

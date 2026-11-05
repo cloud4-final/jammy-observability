@@ -39,23 +39,56 @@ def test_blackbox_jobs_use_file_sd_with_vantage():
     assert "blackbox_icmp" in scrape_configs, (
         "blackbox_icmp job missing in prometheus.yml"
     )
-    assert "blackbox_ssh" in scrape_configs, (
-        "blackbox_ssh job missing in prometheus.yml"
+    assert "blackbox_ssh" not in scrape_configs, (
+        "blackbox_ssh job should be removed from prometheus.yml"
     )
 
-    for job_name in ["blackbox_icmp", "blackbox_ssh"]:
-        job = scrape_configs[job_name]
-        file_sds = job.get("file_sd_configs", [])
-        files = [f for sd in file_sds for f in sd.get("files", [])]
-        assert any("targets/sites.yml" in f for f in files), (
-            f"{job_name} does not reference targets/sites.yml in file_sd_configs"
-        )
-        relabel = job.get("relabel_configs", [])
-        vantage_set = any(
-            r.get("target_label") == "vantage" and r.get("replacement") == "jammy-obs"
-            for r in relabel
-        )
-        assert vantage_set, f"{job_name} relabel_configs does not set vantage=jammy-obs"
+    job = scrape_configs["blackbox_icmp"]
+    file_sds = job.get("file_sd_configs", [])
+    files = [f for sd in file_sds for f in sd.get("files", [])]
+    assert any("targets/sites.yml" in f for f in files), (
+        "blackbox_icmp does not reference targets/sites.yml in file_sd_configs"
+    )
+    relabel = job.get("relabel_configs", [])
+    vantage_set = any(
+        r.get("target_label") == "vantage" and r.get("replacement") == "jammy-obs"
+        for r in relabel
+    )
+    assert vantage_set, "blackbox_icmp relabel_configs does not set vantage=jammy-obs"
+
+
+def test_prometheus_internal_targets_no_localhost():
+    assert PROMETHEUS_YML.exists()
+    content = PROMETHEUS_YML.read_text(encoding="utf-8")
+    assert "localhost" not in content, (
+        "prometheus.yml should use '127.0.0.1' instead of 'localhost' for all internal targets"
+    )
+
+
+def test_readme_requirements():
+    readme_path = HUB_DIR / "README.md"
+    assert readme_path.exists()
+    readme_text = readme_path.read_text(encoding="utf-8")
+
+    # Item 3: 제약 절에 obs->거점 TCP 프로브 관련 기록
+    assert "obs→거점 TCP 프로브는 ACL 허용 후 추가" in readme_text, (
+        "README missing constraint: 'obs→거점 TCP 프로브는 ACL 허용 후 추가'"
+    )
+
+    # Item 4: Alertmanager proxy status endpoint
+    assert "/api/datasources/proxy/uid/alertmanager/api/v2/status" in readme_text, (
+        "README missing Alertmanager proxy endpoint: '/api/datasources/proxy/uid/alertmanager/api/v2/status'"
+    )
+
+    # Item 7: Grafana SSH tunneling
+    assert "ssh -L 3000:127.0.0.1:3000 yang@jammy-obs" in readme_text, (
+        "README missing Grafana SSH tunnel command: 'ssh -L 3000:127.0.0.1:3000 yang@jammy-obs'"
+    )
+    assert "http://localhost:3000" in readme_text, (
+        "README missing 'http://localhost:3000'"
+    )
+
+
 
 
 def test_sites_targets_exact():
@@ -135,3 +168,43 @@ def test_dashboard_has_site_variable_and_no_ips():
     )
     matches = ipv4_pattern.findall(dashboard_text)
     assert not matches, f"Dashboard contains forbidden IP literals: {matches}"
+
+
+def test_rules_and_dashboard_use_vantage_filter():
+    rules_file = REPO_ROOT / "observability" / "alerts" / "rules.yml"
+    assert rules_file.exists()
+    with open(rules_file, "r", encoding="utf-8") as f:
+        rules_cfg = yaml.safe_load(f)
+
+    alerts = {}
+    for group in rules_cfg.get("groups", []):
+        for r in group.get("rules", []):
+            if "alert" in r:
+                alerts[r["alert"]] = r.get("expr", "").strip()
+
+    assert 'up{vantage=""} == 0' in alerts.get("InstanceDown", ""), (
+        f"InstanceDown expr missing vantage=\"\": {alerts.get('InstanceDown')}"
+    )
+    assert 'sum by (site) (up{vantage=""}) == 0' in alerts.get(
+        "SiteNetworkPartition", ""
+    ), f"SiteNetworkPartition expr missing vantage=\"\": {alerts.get('SiteNetworkPartition')}"
+    assert (
+        'up{site=~"jammy-[abc]",vantage=""}'
+        in alerts.get("SiteTelemetryMissing", "")
+    ), f"SiteTelemetryMissing expr missing vantage=\"\": {alerts.get('SiteTelemetryMissing')}"
+
+    with open(DASHBOARD_JSON, "r", encoding="utf-8") as f:
+        dashboard = json.load(f)
+
+    freshness_panels = [
+        p
+        for p in dashboard.get("panels", [])
+        if "freshness" in p.get("title", "").lower() or "lag" in p.get("title", "").lower()
+    ]
+    assert len(freshness_panels) > 0, "Freshness panel not found in dashboard"
+    for p in freshness_panels:
+        exprs = [t.get("expr", "") for t in p.get("targets", [])]
+        assert any('timestamp(up{' in expr and 'vantage=""' in expr for expr in exprs), (
+            f"Freshness panel target expr missing timestamp(up{{...,vantage=\"\"}}): {exprs}"
+        )
+
