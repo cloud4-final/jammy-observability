@@ -1,31 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COLLECTOR_URL="${COLLECTOR_URL:-http://127.0.0.1:8000}"
 PROMETHEUS_URL="${PROMETHEUS_URL:-http://127.0.0.1:9090}"
 LOKI_URL="${LOKI_URL:-http://127.0.0.1:3100}"
 TEMPO_URL="${TEMPO_URL:-http://127.0.0.1:3200}"
-
-# Find events.jsonl
-JSONL_FILE="${1:-}"
-if [[ -z "${JSONL_FILE}" ]]; then
-  for candidate in \
-    "${SCRIPT_DIR}/../apps/collector/sample/events.jsonl" \
-    "${SCRIPT_DIR}/../../apps/collector/sample/events.jsonl" \
-    "/opt/jammy-obs/stack/apps/collector/sample/events.jsonl" \
-    "/opt/jammy-obs/apps/collector/sample/events.jsonl"; do
-    if [[ -f "${candidate}" ]]; then
-      JSONL_FILE="${candidate}"
-      break
-    fi
-  done
-fi
-
-if [[ -z "${JSONL_FILE}" || ! -f "${JSONL_FILE}" ]]; then
-  echo "Error: sample/events.jsonl not found." >&2
-  exit 1
-fi
 
 RUN_TS="$(date +%s)"
 SAMPLE_EVENT_ID="smoke-${RUN_TS}-1"
@@ -33,19 +12,26 @@ TMP_JSONL=$(mktemp)
 trap 'rm -f "${TMP_JSONL}"' EXIT
 
 python3 -c "
-import json, sys
+import json
+
 ts = '${RUN_TS}'
-with open('${JSONL_FILE}', encoding='utf-8') as f:
-    for idx, line in enumerate(f, 1):
-        line = line.strip()
-        if not line:
-            continue
-        obj = json.loads(line)
-        obj['event_id'] = f'smoke-{ts}-{idx}'
-        print(json.dumps(obj))
+regions = ['site-a', 'site-b', 'site-c', 'aws']
+
+for idx in range(1, 21):
+    event = {
+        'event_id': f'smoke-{ts}-{idx}',
+        'region': regions[(idx - 1) % len(regions)],
+        'vehicle_id': f'v-{100 + idx}',
+        'speed_kmh': round(40.0 + (idx * 2.5), 1),
+        'payload': {
+            'soc': 85 - idx,
+            'temp_c': round(22.0 + (idx * 0.4), 1)
+        }
+    }
+    print(json.dumps(event))
 " > "${TMP_JSONL}"
 
-echo "=== [1/4] Sending 20 events from ${JSONL_FILE} ==="
+echo "=== [1/4] Sending 20 events ==="
 post_count=0
 while IFS= read -r line || [[ -n "$line" ]]; do
   [[ -z "$line" ]] && continue

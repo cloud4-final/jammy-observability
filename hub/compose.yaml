@@ -136,7 +136,7 @@ services:
   demo-collector:
     profiles:
       - demo
-    build: ../../apps/collector
+    image: ${COLLECTOR_IMAGE:-jammy-collector:local}
     container_name: jammy-obs-demo-collector
     restart: unless-stopped
     network_mode: host

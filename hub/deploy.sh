@@ -3,6 +3,8 @@ set -euo pipefail
 
 HOST="jammy-obs"
 DEMO=false
+COLLECTOR_SRC=""
+SSH_USER="${SSH_USER:-yang}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -14,8 +16,16 @@ while [[ $# -gt 0 ]]; do
       DEMO=true
       shift
       ;;
+    --collector-src)
+      COLLECTOR_SRC="$2"
+      shift 2
+      ;;
+    --ssh-user)
+      SSH_USER="$2"
+      shift 2
+      ;;
     -h|--help)
-      echo "Usage: $0 [--host <hostname>] [--demo]"
+      echo "Usage: $0 [--host <hostname>] [--demo] [--collector-src <path>] [--ssh-user <user>]"
       exit 0
       ;;
     *)
@@ -26,10 +36,30 @@ while [[ $# -gt 0 ]]; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-REMOTE_USER="yang"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REMOTE_USER="${SSH_USER}"
 REMOTE_TARGET="${REMOTE_USER}@${HOST}"
 STACK_ROOT="/opt/jammy-obs"
+
+if [[ "${DEMO}" == "true" ]]; then
+  if [[ -z "${COLLECTOR_SRC}" && -d "${REPO_ROOT}/../jammy-collector" ]]; then
+    COLLECTOR_SRC="${REPO_ROOT}/../jammy-collector"
+  fi
+
+  if [[ -n "${COLLECTOR_SRC}" && ! -d "${COLLECTOR_SRC}" ]]; then
+    echo "Error: Collector source directory does not exist: ${COLLECTOR_SRC}" >&2
+    exit 1
+  fi
+
+  if [[ -n "${COLLECTOR_SRC}" ]]; then
+    echo "Using collector source: ${COLLECTOR_SRC}"
+  elif [[ -n "${COLLECTOR_IMAGE:-}" ]]; then
+    echo "Using COLLECTOR_IMAGE: ${COLLECTOR_IMAGE}"
+  else
+    echo "Error: Demo mode requires either --collector-src <path> (or default ${REPO_ROOT}/../jammy-collector) or COLLECTOR_IMAGE environment variable." >&2
+    exit 1
+  fi
+fi
 
 echo "=== [1/5] Preparing remote directories on ${HOST} ==="
 ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
@@ -43,6 +73,8 @@ mkdir -p "${target_root}/stack/hub" \
          "${target_root}/data/loki" \
          "${target_root}/data/tempo" \
          "${target_root}/data/grafana"
+# Clean up legacy paths from monorepo if present
+rm -rf "${target_root}/stack/apps" "${target_root}/apps"
 EOF
 
 echo "=== [2/5] Checking secrets on ${HOST} ==="
@@ -66,11 +98,11 @@ fi
 EOF
 
 echo "=== [3/5] Synchronizing stack configs to ${HOST} ==="
-rsync -a --delete "${REPO_ROOT}/observability/hub/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/hub/"
-rsync -a --delete --exclude='*.test.yml' "${REPO_ROOT}/observability/alerts/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/alerts/"
+rsync -a --delete "${REPO_ROOT}/hub/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/hub/"
+rsync -a --delete --exclude='*.test.yml' "${REPO_ROOT}/alerts/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/alerts/"
 
 if [[ "${DEMO}" == "true" ]]; then
-  echo "Demo mode requested: preparing demo secrets and backend source..."
+  echo "Demo mode requested: preparing demo secrets and backend image..."
   ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
 set -euo pipefail
 target_root="$1"
@@ -79,21 +111,33 @@ if [[ ! -f "${secrets_dir}/demo_pg_password" ]]; then
   openssl rand -base64 16 > "${secrets_dir}/demo_pg_password"
 fi
 chmod 600 "${secrets_dir}/demo_pg_password"
-if docker ps -a --format '{{.Names}}' | grep -q '^jammy-obs-demo-postgres$'; then
-  docker rm -f jammy-obs-demo-postgres || true
-fi
-docker run --rm -v "${target_root}/data:/data" alpine rm -rf /data/demo-postgres || rm -rf "${target_root}/data/demo-postgres"
 mkdir -p "${target_root}/data/demo-postgres"
 EOF
-  if [[ -d "${REPO_ROOT}/apps/collector" ]]; then
+
+  if [[ -n "${COLLECTOR_SRC}" ]]; then
+    echo "Building collector image from source on ${HOST}..."
     ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
 set -euo pipefail
-target_root="$1"
-mkdir -p "${target_root}/stack/apps/collector"
-ln -sfn "${target_root}/stack/apps" "${target_root}/apps"
+mkdir -p "$1/stack/collector-src"
 EOF
-    rsync -a --delete "${REPO_ROOT}/apps/collector/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/apps/collector/"
+    rsync -a --delete \
+      --exclude='.git' \
+      --exclude='__pycache__' \
+      --exclude='.pytest_cache' \
+      --exclude='.venv' \
+      "${COLLECTOR_SRC}/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/collector-src/"
+    ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
+set -euo pipefail
+docker build -t jammy-collector:local "$1/stack/collector-src"
+EOF
+  elif [[ -n "${COLLECTOR_IMAGE:-}" ]]; then
+    echo "Pulling collector image on ${HOST}: ${COLLECTOR_IMAGE}..."
+    ssh "${REMOTE_TARGET}" bash -s -- "${COLLECTOR_IMAGE}" << 'EOF'
+set -euo pipefail
+docker pull "$1"
+EOF
   fi
+
   ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
 set -euo pipefail
 target_root="$1"
@@ -119,11 +163,12 @@ fi
 
 echo "=== [4/5] Deploying Docker Compose stack on ${HOST} ==="
 if [[ "${DEMO}" == "true" ]]; then
-  ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
+  ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" "${COLLECTOR_IMAGE:-jammy-collector:local}" << 'EOF'
 set -euo pipefail
 target_root="$1"
+collector_image="$2"
 cd "${target_root}/stack/hub"
-docker compose --profile demo up -d --remove-orphans --build
+COLLECTOR_IMAGE="${collector_image}" docker compose --profile demo up -d --remove-orphans
 EOF
 else
   ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
