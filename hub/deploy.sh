@@ -78,7 +78,7 @@ secrets_dir="${target_root}/secrets"
 if [[ ! -f "${secrets_dir}/demo_pg_password" ]]; then
   openssl rand -base64 16 > "${secrets_dir}/demo_pg_password"
 fi
-chmod 644 "${secrets_dir}/demo_pg_password"
+chmod 600 "${secrets_dir}/demo_pg_password"
 mkdir -p "${target_root}/data/demo-postgres"
 EOF
   if [[ -d "${REPO_ROOT}/apps/collector" ]]; then
@@ -107,6 +107,9 @@ else
 set -euo pipefail
 target_root="$1"
 echo '[]' > "${target_root}/stack/hub/prometheus/targets/demo.yml"
+cd "${target_root}/stack/hub"
+docker compose --profile demo stop
+docker compose --profile demo rm -f
 EOF
 fi
 

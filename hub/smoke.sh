@@ -27,7 +27,23 @@ if [[ -z "${JSONL_FILE}" || ! -f "${JSONL_FILE}" ]]; then
   exit 1
 fi
 
-SAMPLE_EVENT_ID=$(python3 -c "import json; print(json.loads(open('${JSONL_FILE}', encoding='utf-8').readline())['event_id'])")
+RUN_TS="$(date +%s)"
+SAMPLE_EVENT_ID="smoke-${RUN_TS}-1"
+TMP_JSONL=$(mktemp)
+trap 'rm -f "${TMP_JSONL}"' EXIT
+
+python3 -c "
+import json, sys
+ts = '${RUN_TS}'
+with open('${JSONL_FILE}', encoding='utf-8') as f:
+    for idx, line in enumerate(f, 1):
+        line = line.strip()
+        if not line:
+            continue
+        obj = json.loads(line)
+        obj['event_id'] = f'smoke-{ts}-{idx}'
+        print(json.dumps(obj))
+" > "${TMP_JSONL}"
 
 echo "=== [1/4] Sending 20 events from ${JSONL_FILE} ==="
 post_count=0
@@ -40,7 +56,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     echo "Warning: POST /api/v1/events returned HTTP ${resp} for line: ${line}" >&2
   fi
   post_count=$((post_count + 1))
-done < "${JSONL_FILE}"
+done < "${TMP_JSONL}"
 echo "Posted ${post_count} events (sample event_id: ${SAMPLE_EVENT_ID})."
 
 echo "=== [2/4] GET single event /api/v1/events/${SAMPLE_EVENT_ID} ==="
@@ -87,11 +103,11 @@ else
   FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
-# Check 2: Loki {service_name=~".*demo-collector.*"} |= "<샘플 event_id>" 결과 >= 1
+# Check 2: Loki {service_name="jammy-obs-demo-collector"} |= "<샘플 event_id>" 결과 >= 1
 check2_passed=false
 check2_msg=""
 for _ in $(seq 1 5); do
-  res=$(curl -s -G --data-urlencode "query={service_name=~\"(.*demo-collector.*|.+)\"} |= \"${SAMPLE_EVENT_ID}\"" "${LOKI_URL}/loki/api/v1/query_range" || echo "{}")
+  res=$(curl -s -G --data-urlencode "query={service_name=\"jammy-obs-demo-collector\"} |= \"${SAMPLE_EVENT_ID}\"" "${LOKI_URL}/loki/api/v1/query_range" || echo "{}")
   msg=$(echo "$res" | python3 -c '
 import json, sys
 try:
@@ -114,9 +130,9 @@ sys.exit(1)
 done
 
 if [[ "$check2_passed" == "true" ]]; then
-  echo "CHECK 2 (Loki logs {service_name=~\"(.*demo-collector.*|.+)\"} |= \"${SAMPLE_EVENT_ID}\"): ${check2_msg}"
+  echo "CHECK 2 (Loki logs {service_name=\"jammy-obs-demo-collector\"} |= \"${SAMPLE_EVENT_ID}\"): ${check2_msg}"
 else
-  echo "CHECK 2 (Loki logs {service_name=~\"(.*demo-collector.*|.+)\"} |= \"${SAMPLE_EVENT_ID}\"): FAIL"
+  echo "CHECK 2 (Loki logs {service_name=\"jammy-obs-demo-collector\"} |= \"${SAMPLE_EVENT_ID}\"): FAIL"
   FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
@@ -140,7 +156,7 @@ try:
         try:
             req = urllib.request.urlopen('${TEMPO_URL}/api/traces/' + tid, timeout=5)
             content = req.read().decode('utf-8', errors='ignore').lower()
-            if 'psycopg' in content or 'postgresql' in content or 'events' in content:
+            if 'db.system' in content and ('postgresql' in content or 'psycopg' in content):
                 found_db = True
                 break
         except Exception:
@@ -171,7 +187,7 @@ fi
 check4_passed=false
 check4_msg=""
 for _ in $(seq 1 5); do
-  res=$(curl -s -G --data-urlencode 'query={service_name=~"(.*demo-collector.*|.+)"} |= "trace_id"' "${LOKI_URL}/loki/api/v1/query_range" || echo "{}")
+  res=$(curl -s -G --data-urlencode 'query={service_name="jammy-obs-demo-collector"} |= "trace_id"' "${LOKI_URL}/loki/api/v1/query_range" || echo "{}")
   msg=$(echo "$res" | python3 -c "
 import json, sys, urllib.request
 try:
