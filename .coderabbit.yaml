@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: ko-KR
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/*.lock"
+    - "!**/dashboards/*.json"
+  path_instructions:
+    - path: "**"
+      instructions: |
+        버그, 보안, 성능, 테스트 누락에 집중한다.
+        팀 통일값(포트, IP 대역, 서비스 이름, API 형식, DB, 관측 label, 버전)은
+        cloud4-final/hybrid-docs의 contracts.md·decisions.md가 기준이다.
+        이 기준과 다른 값을 쓰면 지적하고, 의도한 변경이면 hybrid-docs PR 링크를 요구한다.
+knowledge_base:
+  linked_repositories:
+    - repository: cloud4-final/hybrid-docs
+      instructions: 팀 통일값(contracts.md)과 팀 결정(decisions.md)의 기준

@@ -1,0 +1,10 @@
+name: docs-link-check
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  docs-link-check:
+    uses: cloud4-final/hybrid-docs/.github/workflows/docs-link-check.yml@main
