@@ -1,0 +1,22 @@
+# managed-by: jammy-obs-agent
+[Unit]
+Description=Grafana Alloy Agent for Site Host (Logs & Traces)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=obsagent
+Group=obsagent
+ExecStart=/opt/jammy-obs-agent/bin/alloy run /opt/jammy-obs-agent/etc/config.alloy \
+  --server.http.listen-addr=127.0.0.1:12345 \
+  --storage.path=/var/lib/jammy-obs-agent/alloy
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/jammy-obs-agent
+
+[Install]
+WantedBy=multi-user.target

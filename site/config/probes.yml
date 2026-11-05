@@ -1,0 +1,19 @@
+- targets:
+    - jammy-a
+  labels:
+    target_site: jammy-a
+
+- targets:
+    - jammy-b
+  labels:
+    target_site: jammy-b
+
+- targets:
+    - jammy-c
+  labels:
+    target_site: jammy-c
+
+- targets:
+    - jammy-obs
+  labels:
+    target_site: jammy-obs

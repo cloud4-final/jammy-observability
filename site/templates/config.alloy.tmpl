@@ -1,0 +1,82 @@
+// Grafana Alloy site agent configuration
+// Collects systemd journal logs and forwards to central Loki
+// Receives OTLP metrics/logs/traces and forwards to central Tempo/OTLP collector
+
+loki.source.journal "systemd_journal" {
+  max_age    = "12h"
+  forward_to = [loki.relabel.journal.receiver]
+  labels     = {
+    job = "journal",
+  }
+}
+
+loki.relabel "journal" {
+  forward_to = [loki.write.jammy_obs.receiver]
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+
+  rule {
+    source_labels = ["__journal__hostname"]
+    target_label  = "host"
+  }
+}
+
+loki.write "jammy_obs" {
+  endpoint {
+    url = "http://@OBS_HOST@:3100/loki/api/v1/push"
+  }
+  external_labels = {
+    site = "@SITE_ID@",
+  }
+}
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "127.0.0.1:4317"
+  }
+
+  http {
+    endpoint = "127.0.0.1:4318"
+  }
+
+  output {
+    metrics = [otelcol.processor.attributes.site_attr.input]
+    logs    = [otelcol.processor.attributes.site_attr.input]
+    traces  = [otelcol.processor.attributes.site_attr.input]
+  }
+}
+
+otelcol.processor.attributes "site_attr" {
+  action {
+    key    = "site"
+    value  = "@SITE_ID@"
+    action = "insert"
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+    traces  = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    metrics = [otelcol.exporter.otlp.jammy_obs.input]
+    logs    = [otelcol.exporter.otlp.jammy_obs.input]
+    traces  = [otelcol.exporter.otlp.jammy_obs.input]
+  }
+}
+
+otelcol.exporter.otlp "jammy_obs" {
+  client {
+    endpoint = "@OBS_HOST@:4317"
+
+    tls {
+      insecure = true // WireGuard (Tailscale) network provides transport security
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# managed-by: jammy-obs-agent
+[Unit]
+Description=Prometheus Node Exporter for Site Host
+After=network.target
+
+[Service]
+Type=simple
+User=obsagent
+Group=obsagent
+ExecStart=/opt/jammy-obs-agent/bin/node_exporter \
+  --web.listen-address=127.0.0.1:9100
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/jammy-obs-agent
+
+[Install]
+WantedBy=multi-user.target
