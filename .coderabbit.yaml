@@ -18,14 +18,15 @@ reviews:
         mode: warning
         instructions: |
           cloud4-final/hybrid-docs의 contracts.md(C-), decisions.md(D-), architecture.md(A-), mvp-roles.md(M-)를 기준으로 검사한다.
-          1. status: active인 C-/D-/A-/M- 블록의 규칙(포트, 대역, 끝자리 IP, 환경변수, API 스키마, 태그, 메트릭 라벨, 아키텍처 경계, MVP 범위)을 어기면 실패로 표시하고 해당 ID를 인용한다. (단, PR 본문에 hybrid-docs PR 링크가 있으면 의도된 변경으로 본다.)
-          2. 이 PR이 다른 파트/저장소(hybrid-5th, jammy-collector)와의 연결을 깨뜨리거나 merge 후 런타임/배포 장애를 일으키면 실패로 표시한다.
+          1. status: active인 C-/D-/A-/M- 블록의 규칙(포트, 대역, 끝자리 IP, 환경변수, API 스키마, 태그, 메트릭 라벨, 아키텍처 경계, MVP 범위, C-VER 최소 버전)을 어기면 실패로 표시하고 해당 ID를 인용한다. (단, PR 본문에 hybrid-docs PR 링크나 구버전 사용 사유가 명시되어 있으면 의도된 변경으로 보고 통과시킨다.)
+          2. 배포일 1년 이상 경과한 구버전 오픈소스·이미지·액션이나 레거시 도구(latest, @master 등)를 사유 없이 쓰면 C-VER-001~004를 인용해 경고한다.
+          3. 이 PR이 다른 파트/저장소(hybrid-5th, jammy-collector)와의 연결을 깨뜨리거나 merge 후 런타임/배포 장애를 일으키면 실패로 표시한다.
   path_instructions:
     - path: "**"
       instructions: |
         성능 개선 제안, 코딩 스타일, 단순 리팩터링 조언은 하지 않는다. 오직 아래 5가지만 리뷰한다.
-        1. 팀 약속·방향성 위반: 버전, 포트, 주소, 이름, API, DB, label, 태그, 아키텍처 경계, MVP 범위가
-           cloud4-final/hybrid-docs의 contracts.md(C-)·decisions.md(D-)·architecture.md(A-)·mvp-roles.md(M-)와 다른지.
+        1. 팀 약속·방향성·버전 기준 위반: 최소 버전(C-VER-001~004, 1년 이상 지난 구버전·레거시 포함), 포트, 주소, 이름, API, DB, label, 태그, 아키텍처 경계, MVP 범위가
+           cloud4-final/hybrid-docs의 contracts.md(C-)·decisions.md(D-)·architecture.md(A-)·mvp-roles.md(M-)와 다른지. (구버전 사용은 막지 않고 경고하며, PR 본문에 사유가 있으면 허용한다.)
         2. merge 후 장애: merge 후 배포, 실행, 마이그레이션, 설정이 실패하거나 서비스가 멈추는지.
            예: 빠진 env, 잘못된 경로, 되돌릴 수 없는 변경, 적용 순서 문제.
         3. 코드 결함: 버그, 보안 문제, 예외 처리 누락, 테스트 누락.
