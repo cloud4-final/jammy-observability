@@ -10,22 +10,32 @@ reviews:
   path_filters:
     - "!**/*.lock"
     - "!**/dashboards/*.json"
+  pre_merge_checks:
+    docstrings:
+      mode: off
+    custom_checks:
+      - name: "팀 기준(hybrid-docs) 및 파트 연결 호환성"
+        mode: warning
+        instructions: |
+          cloud4-final/hybrid-docs의 contracts.md(C-), decisions.md(D-), architecture.md(A-), mvp-roles.md(M-)를 기준으로 검사한다.
+          1. status: active인 C-/D-/A-/M- 블록의 규칙(포트, 대역, 끝자리 IP, 환경변수, API 스키마, 태그, 메트릭 라벨, 아키텍처 경계, MVP 범위)을 어기면 실패로 표시하고 해당 ID를 인용한다. (단, PR 본문에 hybrid-docs PR 링크가 있으면 의도된 변경으로 본다.)
+          2. 이 PR이 다른 파트/저장소(hybrid-5th, jammy-collector)와의 연결을 깨뜨리거나 merge 후 런타임/배포 장애를 일으키면 실패로 표시한다.
   path_instructions:
     - path: "**"
       instructions: |
-        아래 5가지만 리뷰한다. 스타일과 취향은 지적하지 않는다.
-        1. 팀 약속 위반: 버전, 포트, 주소, 이름, API, DB, label, 태그, 방향성 결정이
-           cloud4-final/hybrid-docs의 contracts.md(C- 규칙)·decisions.md(D- 결정)와 다른지.
+        성능 개선 제안, 코딩 스타일, 단순 리팩터링 조언은 하지 않는다. 오직 아래 5가지만 리뷰한다.
+        1. 팀 약속·방향성 위반: 버전, 포트, 주소, 이름, API, DB, label, 태그, 아키텍처 경계, MVP 범위가
+           cloud4-final/hybrid-docs의 contracts.md(C-)·decisions.md(D-)·architecture.md(A-)·mvp-roles.md(M-)와 다른지.
         2. merge 후 장애: merge 후 배포, 실행, 마이그레이션, 설정이 실패하거나 서비스가 멈추는지.
            예: 빠진 env, 잘못된 경로, 되돌릴 수 없는 변경, 적용 순서 문제.
         3. 코드 결함: 버그, 보안 문제, 예외 처리 누락, 테스트 누락.
         4. 함께 쓸 때 문제: 다른 repo나 파트가 이 코드(API, 이미지, env, metric, 설정)를 쓸 때 깨지는지.
            호환되지 않으면 "breaking change"로 표시한다.
         5. 다른 파트 영향: 이 변경 때문에 다른 repo나 경로도 고쳐야 하는지.
-           관련 규칙의 scope를 보고 고쳐야 할 repo와 경로를 적는다.
+           관련 규칙의 scope와 mvp-roles.md의 owner를 보고 고쳐야 할 repo·경로·담당자를 적는다.
 
         판단 규칙:
-        - 근거를 인용한다: 규칙 ID(예: C-API-002), 결정 ID(예: D-20261104-01), 또는 파일과 줄.
+        - 근거를 인용한다: 규칙 ID(C-/D-/A-/M-) 또는 파일과 줄.
         - status: active 규칙만 위반으로 본다.
         - status: superseded 규칙을 따르는 코드는 "legacy: <옛 ID>는 <by의 ID>로 대체됨"으로 지적한다.
         - status: open 규칙에 의존하는 코드는 "결정 필요(<owner>)"로 표시하고 위반으로 보지 않는다.
@@ -33,6 +43,17 @@ reviews:
           hybrid-docs PR을 만들어 merge하고 이 PR 본문에 링크하라고 요구한다.
         - 기준 문서에 없는 값은 위반으로 판단하지 않는다.
 knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "cloud4-final/hybrid-docs:contracts.md"
+      - "cloud4-final/hybrid-docs:decisions.md"
+      - "cloud4-final/hybrid-docs:architecture.md"
+      - "cloud4-final/hybrid-docs:mvp-roles.md"
   linked_repositories:
     - repository: cloud4-final/hybrid-docs
-      instructions: 팀 약속의 기준. contracts.md는 파트 간 통일값(C- 규칙), decisions.md는 팀 결정(D- 결정)이다.
+      instructions: 팀 약속의 기준. contracts.md(C-), decisions.md(D-), architecture.md(A-), mvp-roles.md(M-).
+    - repository: cloud4-final/hybrid-5th
+      instructions: 인프라(AWS·온프레미스), K8s 매니페스트, 부하 시험. 관측 에이전트 배포 및 포트·방화벽 호환성 확인.
+    - repository: cloud4-final/jammy-collector
+      instructions: 수집·조회 API 서버. /metrics 라벨(site, layer 등), OTLP trace/log 연동 호환성 확인.
