@@ -321,6 +321,10 @@ tests:
             exp_annotations:
               summary: DataVmDiskLow
               description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
+          - exp_labels: {severity: warning, job: node_datavm, site: jammy-a, instance: a, mountpoint: /srv/postgresql, device: /dev/vdb, fstype: ext4}
+            exp_annotations:
+              summary: DataVmDiskLow
+              description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
   - interval: 1m
     input_series:
       - series: 'node_filesystem_avail_bytes{job="node_datavm",site="jammy-obs",instance="vm",mountpoint="/"}'
@@ -331,3 +335,18 @@ tests:
       - eval_time: 10m
         alertname: HubDiskLow
         exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node_datavm",site="jammy-b",instance="b",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '15+0x12 9+0x12'
+      - series: 'node_filesystem_size_bytes{job="node_datavm",site="jammy-b",instance="b",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '100+0x25'
+    alert_rule_test:
+      # 15% for 13m -> warning firing; drops to 9% at 13m, critical still pending at 18m, warning must not disappear
+      - eval_time: 18m
+        alertname: DataVmDiskLow
+        exp_alerts:
+          - exp_labels: {severity: warning, job: node_datavm, site: jammy-b, instance: b, mountpoint: /srv/postgresql, device: /dev/vdb, fstype: ext4}
+            exp_annotations:
+              summary: DataVmDiskLow
+              description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
