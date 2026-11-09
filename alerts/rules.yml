@@ -66,10 +66,84 @@ groups:
 
       # 7. 중앙 관측 허브 디스크 부족
       - alert: HubDiskLow
-        expr: node_filesystem_avail_bytes{site="jammy-obs",mountpoint="/"} / node_filesystem_size_bytes{site="jammy-obs",mountpoint="/"} < 0.15
+        expr: node_filesystem_avail_bytes{job="node",site="jammy-obs",mountpoint="/"} / node_filesystem_size_bytes{job="node",site="jammy-obs",mountpoint="/"} < 0.15
         for: 10m
         labels:
           severity: critical
         annotations:
           summary: "Root disk low on jammy-obs (< 15% available)"
           description: "Host root filesystem available space on jammy-obs is below 15% for more than 10 minutes."
+  - name: postgres_replication
+    rules:
+      - alert: PostgresExporterDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: PostgresExporterDown
+          description: "Check the Data VM, replication connections and disk. 잠정값, k6 시험 후 조정"
+      - alert: PostgresDown
+        expr: pg_up{job="postgres"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: PostgresDown
+          description: "Check the Data VM, replication connections and disk. 잠정값, k6 시험 후 조정"
+      - alert: ReplicaNotStreaming
+        expr: (pg_replication_is_replica{job="postgres"} == 0) unless on (site, instance) (count by (site, instance) (pg_stat_replication_pg_wal_lsn_diff{job="postgres",state="streaming"}) >= 2)
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: ReplicaNotStreaming
+          description: "Check the Data VM, replication connections and disk. 잠정값, k6 시험 후 조정"
+      - alert: ReplicationLagHigh
+        expr: pg_stat_replication_pg_wal_lsn_diff{state="streaming"} > 67108864
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: ReplicationLagHigh
+          description: "Check the Data VM, replication connections and disk. 잠정값, k6 시험 후 조정"
+      - alert: ReplicationSlotInactive
+        expr: pg_replication_slot_slot_is_active == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: ReplicationSlotInactive
+          description: "Check the Data VM, replication connections and disk. 잠정값, k6 시험 후 조정"
+      - alert: ReplicationSlotWalRetained
+        expr: pg_replication_slots_pg_wal_lsn_diff > 1073741824
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: ReplicationSlotWalRetained
+          description: "Check the Data VM, replication connections and disk. 잠정값, k6 시험 후 조정"
+      - alert: MultiplePrimaries
+        expr: count(pg_replication_is_replica{job="postgres"} == 0) > 1
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: MultiplePrimaries
+          description: "Check the Data VM, replication connections and disk. 잠정값, k6 시험 후 조정"
+  - name: data_vm_health
+    rules:
+      - alert: DataVmNodeExporterDown
+        expr: up{job="node_datavm"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: DataVmNodeExporterDown
+          description: "Check the Data VM node exporter and network path. 잠정값, k6 시험 후 조정"
+      - alert: DataVmDiskLow
+        expr: node_filesystem_avail_bytes{job="node_datavm",mountpoint="/srv/postgresql"} / node_filesystem_size_bytes{job="node_datavm",mountpoint="/srv/postgresql"} < 0.20
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: DataVmDiskLow
+          description: "Check available disk space on the Data VM. 잠정값, k6 시험 후 조정"
+      - alert: DataVmDiskLow
+        expr: node_filesystem_avail_bytes{job="node_datavm",mountpoint="/srv/postgresql"} / node_filesystem_size_bytes{job="node_datavm",mountpoint="/srv/postgresql"} < 0.10
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: DataVmDiskLow
+          description: "Check available disk space on the Data VM. 잠정값, k6 시험 후 조정"
