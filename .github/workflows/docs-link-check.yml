@@ -7,4 +7,4 @@ permissions:
   pull-requests: read
 jobs:
   docs-link-check:
-    uses: cloud4-final/hybrid-docs/.github/workflows/docs-link-check.yml@main
+    uses: cloud4-final/jammy-docs/.github/workflows/docs-link-check.yml@main

@@ -70,4 +70,4 @@ ssh -L 3000:127.0.0.1:3000 yang@jammy-obs
 ## 4. 관련 저장소 (Related Repositories)
 
 - 모빌리티 이벤트 수집 백엔드: [cloud4-final/jammy-collector](https://github.com/cloud4-final/jammy-collector)
-- 상위 모노레포: [cloud4-final/hybrid-5th](https://github.com/cloud4-final/hybrid-5th)
+- 상위 모노레포: [cloud4-final/jammy-5th](https://github.com/cloud4-final/jammy-5th)
