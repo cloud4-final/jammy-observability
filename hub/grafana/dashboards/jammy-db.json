@@ -1,0 +1,638 @@
+{
+  "uid": "jammy-db",
+  "title": "PostgreSQL",
+  "schemaVersion": 38,
+  "version": 1,
+  "tags": [
+    "jammy",
+    "postgresql"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(pg_up{job=\"postgres\"}, site)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Site",
+        "multi": true,
+        "name": "site",
+        "options": [],
+        "query": {
+          "query": "label_values(pg_up{job=\"postgres\"}, site)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "PostgreSQL status",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_up{job=\"postgres\",site=~\"$site\"}",
+          "legendFormat": "{{site}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**DB 접속 가능 여부**\n\n- 1 = 정상, 0 = 중단"
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "PostgreSQL role",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_replication_is_replica{job=\"postgres\",site=~\"$site\"}",
+          "legendFormat": "{{site}} (1 = replica)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**DB 역할**\n\n- 0 = 원본(쓰기), 1 = 복제본(읽기)\n- 정상: A = 0, B·C = 1\n- 0이 두 개 이상 → 이중 원본, 즉시 DB 담당 확인"
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Streaming replicas",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count by (site) (pg_stat_replication_pg_wal_lsn_diff{job=\"postgres\",site=~\"$site\",state=\"streaming\"})",
+          "legendFormat": "{{site}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**원본에 붙은 복제본 수**\n\n- 정상: 2 (B·C)\n- 1 이하 → 복제본 끊김"
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Replication lag (bytes)",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_stat_replication_pg_wal_lsn_diff{job=\"postgres\",site=~\"$site\",state=\"streaming\"}",
+          "legendFormat": "{{site}} {{application_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**복제 지연 (데이터 양)**\n\n- 정상: 0 근처\n- 계속 증가 → 복제본이 못 따라옴"
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Replication lag (seconds)",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_replication_lag_seconds{job=\"postgres\",site=~\"$site\"}",
+          "legendFormat": "{{site}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**복제 지연 (시간)**\n\n- 쓰기가 없으면 지연 없이도 값이 커짐\n- bytes 패널과 같이 판단"
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Replication slot active",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_replication_slot_slot_is_active{job=\"postgres\",site=~\"$site\"}",
+          "legendFormat": "{{site}} {{slot_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**복제 슬롯 사용 여부**\n\n- 1 = 복제본 연결 중\n- 0 지속 → 원본 WAL이 쌓임"
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "WAL retained by slot",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_replication_slots_pg_wal_lsn_diff{job=\"postgres\",site=~\"$site\"}",
+          "legendFormat": "{{site}} {{slot_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**원본이 보관 중인 WAL 양**\n\n- 복제본이 오래 끊기면 계속 증가\n- 원본 디스크가 찰 수 있음"
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Database size",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_database_size_bytes{job=\"postgres\",site=~\"$site\",datname=\"jammy\"}",
+          "legendFormat": "{{site}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**DB 전체 크기**\n\n- 증가 속도로 디스크 소진 시점 추정"
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "PostgreSQL locks",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "pg_locks_count{job=\"postgres\",site=~\"$site\"}",
+          "legendFormat": "{{site}} {{datname}} {{mode}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**현재 lock 수**\n\n- 쓰기 지연과 같이 늘면 → 경합 의심"
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Connections by state",
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (site, state) (pg_stat_activity_count{datname=\"jammy\",site=~\"$site\"})",
+          "legendFormat": "{{site}} {{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**DB 접속 수 (상태별)**\n\n- 최대 접속 수에 가까우면 새 연결 실패 위험"
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Data VM disk used %",
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (1 - node_filesystem_avail_bytes{job=\"node_datavm\",site=~\"$site\",mountpoint=~\"/|/srv/postgresql\"} / node_filesystem_size_bytes{job=\"node_datavm\",site=~\"$site\",mountpoint=~\"/|/srv/postgresql\"})",
+          "legendFormat": "{{site}} {{mountpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**Data VM 디스크 사용률**\n\n- `/srv/postgresql` = DB 데이터, `/` = OS\n- 80% 경고, 90% 위험"
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Data VM disk available bytes",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "node_filesystem_avail_bytes{job=\"node_datavm\",site=~\"$site\",mountpoint=~\"/|/srv/postgresql\"}",
+          "legendFormat": "{{site}} {{mountpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**Data VM 디스크 남은 용량**\n\n- DB 크기 증가 속도와 비교"
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Data VM CPU usage",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (1 - avg by (site) (rate(node_cpu_seconds_total{job=\"node_datavm\",site=~\"$site\",mode=\"idle\"}[$__rate_interval])))",
+          "legendFormat": "{{site}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**Data VM CPU 사용률**\n\n- 부하 시험 중 DB CPU 한계 확인"
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Data VM memory usage",
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"node_datavm\",site=~\"$site\"} / node_memory_MemTotal_bytes{job=\"node_datavm\",site=~\"$site\"})",
+          "legendFormat": "{{site}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "**Data VM 메모리 사용률**\n\n"
+    }
+  ]
+}

@@ -118,7 +118,8 @@
         }
       ],
       "title": "HTTP Request Rate (RPS by Endpoint)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**collector 초당 요청 수**\n\n- 갑자기 0 → collector 중단 또는 입구 경로 문제"
     },
     {
       "datasource": {
@@ -190,7 +191,8 @@
         }
       ],
       "title": "HTTP 5xx Error Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**5xx 오류 비율**\n\n- 정상: 0에 가까움\n- 503 증가 → 대부분 DB 연결 문제, `jammy-db` 확인"
     },
     {
       "collapsed": false,
@@ -274,7 +276,8 @@
         }
       ],
       "title": "HTTP Request Latency (p50 / p95 / p99)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**요청 처리 시간 (p50 / p95 / p99)**\n\n- p99만 튀면 일부 요청만 느림\n- DB lock, 복제 지연, Wi-Fi 지터 의심"
     },
     {
       "datasource": {
@@ -324,7 +327,8 @@
         }
       ],
       "title": "Database Query Duration p95 by Operation",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**DB 쿼리 시간 p95**\n\n- HTTP 지연과 같이 늘면 → DB가 원인\n- 혼자 그대로면 → 앱·네트워크 쪽"
     },
     {
       "collapsed": false,
@@ -386,7 +390,8 @@
         }
       ],
       "title": "Mobility Events Ingestion Rate by Status & Region",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**이벤트 접수 결과**\n\n- accepted: 신규 저장\n- duplicate: 재전송된 이벤트\n- rejected: 잘못된 region (400)"
     },
     {
       "collapsed": false,
@@ -434,7 +439,8 @@
         }
       ],
       "title": "Collector Service Logs (Loki)",
-      "type": "logs"
+      "type": "logs",
+      "description": "**collector 로그**\n\n- 오류 시각 전후 확인\n- `trace_id`로 Tempo와 연결"
     },
     {
       "datasource": {
@@ -461,7 +467,8 @@
         }
       ],
       "title": "Collector Distributed Traces (Tempo)",
-      "type": "traces"
+      "type": "traces",
+      "description": "**요청 추적 (Tempo)**\n\n- 느린 요청을 열어 오래 걸린 구간 확인"
     }
   ],
   "refresh": "10s",

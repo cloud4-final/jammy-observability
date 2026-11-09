@@ -129,7 +129,8 @@
         }
       ],
       "title": "VMs by Site",
-      "type": "stat"
+      "type": "stat",
+      "description": "**거점별 VM 개수**\n\n- 정상: A 4, B 3, C 3"
     },
     {
       "datasource": {
@@ -206,7 +207,8 @@
         }
       ],
       "title": "libvirt Daemon Status",
-      "type": "stat"
+      "type": "stat",
+      "description": "**libvirt 응답 여부**\n\n- 0 → VM 지표 전체 끊김"
     },
     {
       "datasource": {
@@ -275,7 +277,8 @@
         }
       ],
       "title": "Host vs VM Max Memory Allocation Ratio",
-      "type": "gauge"
+      "type": "gauge",
+      "description": "**VM 메모리 할당 합 ÷ 호스트 메모리**\n\n- 100% 초과 → 과할당, 동시 사용 시 위험"
     },
     {
       "collapsed": false,
@@ -540,7 +543,8 @@
         }
       ],
       "title": "Virtual Machine State & Resource Summary",
-      "type": "table"
+      "type": "table",
+      "description": "**VM별 상태·자원 요약**\n\n- 위쪽 `domain` 변수로 VM 선택"
     },
     {
       "collapsed": false,
@@ -602,7 +606,8 @@
         }
       ],
       "title": "VM CPU Utilization",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**VM별 CPU 사용률**\n\n"
     },
     {
       "datasource": {
@@ -652,7 +657,8 @@
         }
       ],
       "title": "VM Memory Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**VM별 메모리 사용량**\n\n"
     },
     {
       "collapsed": false,
@@ -725,7 +731,8 @@
         }
       ],
       "title": "VM Disk Throughput (Read / Write Bps)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**VM 디스크 읽기·쓰기 속도**\n\n- 부하 시험 중 DB VM 쓰기량 확인"
     },
     {
       "datasource": {
@@ -786,7 +793,8 @@
         }
       ],
       "title": "VM Network Throughput (rx / tx bps)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**VM 네트워크 송수신 속도**\n\n"
     },
     {
       "datasource": {
@@ -869,7 +877,8 @@
         }
       ],
       "title": "VM Network Drops & Errors Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**VM 네트워크 drop·error**\n\n- 0이 정상"
     }
   ],
   "refresh": "15s",
