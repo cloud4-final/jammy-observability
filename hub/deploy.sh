@@ -149,13 +149,22 @@ if [[ ! -s "${webhook_file}" ]] || [[ "$(wc -l < "${webhook_file}")" -gt 1 ]] ||
   echo "  ssh -t <user>@<hub> 'umask 077; read -rsp \"Slack webhook URL: \" U; echo; printf \"%s\\n\" \"\$U\" > ${webhook_file}'" >&2
   exit 1
 fi
-# Alertmanager runs as ${OBS_UID:-1000} (hub/compose.yaml); after chmod 600 only the owner can read the file.
-am_uid="${OBS_UID:-1000}"
-if [[ "$(stat -c %u "${webhook_file}")" != "${am_uid}" ]]; then
-  echo "ERROR: ${webhook_file} is owned by uid $(stat -c %u "${webhook_file}"), but Alertmanager runs as uid ${am_uid}; it could not read the webhook." >&2
-  echo "Fix ownership first: sudo chown ${am_uid}:${OBS_GID:-1000} ${webhook_file}" >&2
-  exit 1
+# Alertmanager runs as OBS_UID (hub/compose.yaml). Resolve it like Compose does:
+# shell env first, then the stack .env, then the compose default 1000.
+am_uid="${OBS_UID:-}"
+if [[ -z "${am_uid}" && -f "${target_root}/stack/hub/.env" ]]; then
+  am_uid="$(sed -n 's/^OBS_UID=//p' "${target_root}/stack/hub/.env" | tail -n 1)"
 fi
+am_uid="${am_uid:-1000}"
+# Single supported layout: the deploy user, the secrets dir owner and the webhook file owner
+# are all the Alertmanager uid, so chmod 700/600 never locks Alertmanager out.
+for path in "${secrets_dir}" "${webhook_file}"; do
+  if [[ "$(id -u)" != "${am_uid}" || "$(stat -c %u "${path}")" != "${am_uid}" ]]; then
+    echo "ERROR: deploy user uid $(id -u), ${path} owner uid $(stat -c %u "${path}"), Alertmanager uid ${am_uid}." >&2
+    echo "Deploy as the Alertmanager uid and make it own ${secrets_dir} and its files (e.g. --ssh-user of uid ${am_uid})." >&2
+    exit 1
+  fi
+done
 chmod 600 "${webhook_file}"
 EOF
 
