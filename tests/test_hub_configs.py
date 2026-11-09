@@ -119,23 +119,21 @@ def test_sites_targets_exact():
     assert "jammy-c" in str(targets_found)
 
 
-def test_alertmanager_discord_uses_file():
-    assert ALERTMANAGER_YML.exists()
+def test_alertmanager_slack_uses_file():
     with open(ALERTMANAGER_YML, "r", encoding="utf-8") as f:
         am_cfg = yaml.safe_load(f)
-    receivers = am_cfg.get("receivers", [])
-    discord_receivers = [r for r in receivers if r.get("name") == "discord"]
-    assert len(discord_receivers) > 0, "No receiver named 'discord' in alertmanager.yml"
-
-    discord_cfg = discord_receivers[0].get("discord_configs", [])
-    assert len(discord_cfg) > 0, "No discord_configs in discord receiver"
-    for cfg in discord_cfg:
-        assert "webhook_url_file" in cfg, (
-            "discord_configs does not use webhook_url_file"
-        )
-        assert "/secrets/" in cfg["webhook_url_file"], (
-            "webhook_url_file does not point to secrets"
-        )
+    receivers = {r["name"]: r for r in am_cfg.get("receivers", [])}
+    assert am_cfg["route"]["receiver"] == "slack-jammy-alerts"
+    for name in ("slack-jammy-alerts", "slack-jammy-alerts-critical"):
+        cfgs = receivers[name].get("slack_configs", [])
+        assert cfgs, f"{name} has no slack_configs"
+        for cfg in cfgs:
+            assert cfg.get("api_url_file") == "/etc/alertmanager/secrets/slack_webhook_url"
+            assert "api_url" not in cfg, "webhook URL must not be inlined"
+            assert cfg.get("send_resolved") is True
+    critical = [r for r in am_cfg["route"]["routes"] if "severity = critical" in r.get("matchers", [])]
+    assert critical and critical[0]["receiver"] == "slack-jammy-alerts-critical"
+    assert "discord" not in open(ALERTMANAGER_YML, encoding="utf-8").read()
 
 
 def test_datasource_uids():

@@ -140,10 +140,10 @@ if [[ ! -f "${secrets_dir}/grafana_admin_password" ]]; then
   chmod 600 "${secrets_dir}/grafana_admin_password"
 fi
 
-if [[ ! -f "${secrets_dir}/discord_webhook_url" ]]; then
-  echo "WARN: ${secrets_dir}/discord_webhook_url missing; setting placeholder." >&2
-  echo "https://discord.com/api/webhooks/0/placeholder" > "${secrets_dir}/discord_webhook_url"
-  chmod 600 "${secrets_dir}/discord_webhook_url"
+if [[ ! -f "${secrets_dir}/slack_webhook_url" ]]; then
+  echo "WARN: ${secrets_dir}/slack_webhook_url missing; setting placeholder. Alerts will not reach Slack #jammy-alerts." >&2
+  echo "https://hooks.slack.com/services/PLACEHOLDER" > "${secrets_dir}/slack_webhook_url"
+  chmod 600 "${secrets_dir}/slack_webhook_url"
 fi
 EOF
 
