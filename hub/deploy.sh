@@ -141,7 +141,9 @@ if [[ ! -f "${secrets_dir}/grafana_admin_password" ]]; then
 fi
 
 webhook_file="${secrets_dir}/slack_webhook_url"
-if [[ ! -s "${webhook_file}" ]] || ! grep -qE '^https://hooks\.slack\.com/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9]+$' "${webhook_file}"; then
+webhook_re='^https://hooks\.slack\.com/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9]+$'
+# The whole file must be exactly one URL (one line, optional trailing newline).
+if [[ ! -s "${webhook_file}" ]] || [[ "$(wc -l < "${webhook_file}")" -gt 1 ]] || ! [[ "$(cat "${webhook_file}")" =~ ${webhook_re} ]]; then
   echo "ERROR: ${webhook_file} is missing or not a Slack Incoming Webhook URL; alerts would not reach #jammy-alerts." >&2
   echo "Create it on the hub host first (input is hidden):" >&2
   echo "  ssh -t <user>@<hub> 'umask 077; read -rsp \"Slack webhook URL: \" U; echo; printf \"%s\\n\" \"\$U\" > ${webhook_file}'" >&2
