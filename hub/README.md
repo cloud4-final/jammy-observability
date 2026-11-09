@@ -11,7 +11,7 @@ Docker Compose 기반의 단일 노드 스택으로 동작하며, 모든 서비�
 | 서비스 | 리슨 주소 | 외부 노출(tailscale0) | 역할 |
 |---|---|---|---|
 | **Prometheus** | `0.0.0.0:9090` | 예 | 시계열 수집, remote-write receiver, 알림 평가 |
-| **Alertmanager** | `0.0.0.0:9093` | 예 | 알림 라우팅, Discord Webhook 전송 (클러스터 비활성화) |
+| **Alertmanager** | `0.0.0.0:9093` | 예 | 알림 라우팅, Slack `#jammy-alerts` Incoming Webhook 전송 (클러스터 비활성화) |
 | **Loki** | http `0.0.0.0:3100`<br>grpc `127.0.0.1:9096` | 예 (3100) | 로그 수집 엔진 (v13 tsdb + filesystem) |
 | **Tempo** | http `127.0.0.1:3200`<br>grpc `127.0.0.1:9097`<br>OTLP `0.0.0.0:4317`/`0.0.0.0:4318` | 예 (4317/4318) | 분산 추적 백엔드 (OTLP 수신, 72h 보관) |
 | **Grafana** | `0.0.0.0:3000` | 예 | NOC 대시보드 및 탐색 UI |
@@ -60,7 +60,7 @@ Docker Compose 기반의 단일 노드 스택으로 동작하며, 모든 서비�
 │   └── grafana/
 └── secrets/            # 권한 700 격리 비밀 파일 (Git 커밋 절대 금지)
     ├── grafana_admin_password
-    └── discord_webhook_url
+    └── slack_webhook_url
 ```
 
 ---

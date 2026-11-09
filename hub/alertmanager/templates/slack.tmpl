@@ -1,0 +1,13 @@
+{{ define "jammy.slack.title" -}}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ or .CommonLabels.severity "mixed-severity" }} · {{ or .CommonLabels.site "multi-site" }} · {{ or .CommonLabels.alertname "multiple-alerts" }}
+{{- end }}
+
+{{ define "jammy.slack.text" -}}
+{{ range .Alerts -}}
+*{{ or .Annotations.summary .Labels.alertname }}*{{ if .Labels.severity }} ({{ .Labels.severity }}){{ end }}
+{{ if .Annotations.description }}{{ .Annotations.description }}
+{{ end }}시작: {{ .StartsAt.Local.Format "2006-01-02 15:04:05 MST" }}{{ if eq .Status "resolved" }} · 해결: {{ .EndsAt.Local.Format "2006-01-02 15:04:05 MST" }}{{ end }}
+{{ if .Labels.instance }}대상: `{{ .Labels.instance }}` {{ end }}{{ if .Labels.job }}job: `{{ .Labels.job }}`{{ end }}
+{{ end -}}
+대시보드: Grafana `jammy-noc` / `jammy-db` (ssh -L 3000:127.0.0.1:3000 yang@jammy-obs)
+{{- end }}

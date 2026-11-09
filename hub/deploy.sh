@@ -140,10 +140,23 @@ if [[ ! -f "${secrets_dir}/grafana_admin_password" ]]; then
   chmod 600 "${secrets_dir}/grafana_admin_password"
 fi
 
-if [[ ! -f "${secrets_dir}/discord_webhook_url" ]]; then
-  echo "WARN: ${secrets_dir}/discord_webhook_url missing; setting placeholder." >&2
-  echo "https://discord.com/api/webhooks/0/placeholder" > "${secrets_dir}/discord_webhook_url"
-  chmod 600 "${secrets_dir}/discord_webhook_url"
+webhook_file="${secrets_dir}/slack_webhook_url"
+webhook_re='^https://hooks\.slack\.com/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9]+$'
+if [[ ! -e "${webhook_file}" ]]; then
+  echo "ERROR: ${webhook_file} is missing; alerts would not reach Slack #jammy-alerts." >&2
+  echo "Create it on the hub host first (input is hidden):" >&2
+  echo "  ssh -t <user>@<hub> 'umask 077; read -rsp \"Slack webhook URL: \" U; echo; printf \"%s\\n\" \"\$U\" > ${webhook_file}'" >&2
+  exit 1
+fi
+if [[ -r "${webhook_file}" ]]; then
+  # The whole file must be exactly one URL (one line, optional trailing newline).
+  if [[ ! -s "${webhook_file}" ]] || [[ "$(wc -l < "${webhook_file}")" -gt 1 ]] || ! [[ "$(cat "${webhook_file}")" =~ ${webhook_re} ]]; then
+    echo "ERROR: ${webhook_file} is not exactly one Slack Incoming Webhook URL." >&2
+    exit 1
+  fi
+  if [[ -O "${webhook_file}" ]]; then chmod 600 "${webhook_file}"; fi
+else
+  echo "NOTE: ${webhook_file} is not readable by the deploy user; checking it from inside Alertmanager after start."
 fi
 EOF
 
@@ -227,6 +240,13 @@ target_root="$1"
 cd "${target_root}/stack/hub"
 docker compose -f compose.yaml up -d --remove-orphans
 EOF
+fi
+
+echo "=== Verifying Alertmanager can read the Slack webhook ==="
+# Checked inside the running container, so it uses the real Alertmanager uid, directory and file permissions.
+if ! ssh "${REMOTE_TARGET}" 'docker exec jammy-obs-alertmanager sh -c '"'"'f=/etc/alertmanager/secrets/slack_webhook_url; test -r "$f" && [ "$(wc -l < "$f")" -le 1 ] && grep -qE "^https://hooks\.slack\.com/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9]+$" "$f"'"'"''; then
+  echo "ERROR: Alertmanager cannot read a valid Slack webhook at /etc/alertmanager/secrets/slack_webhook_url; fix owner/permissions of ${STACK_ROOT}/secrets for the Alertmanager uid (OBS_UID)." >&2
+  exit 1
 fi
 
 echo "=== [5/5] Waiting for services to become healthy (up to 120s) ==="

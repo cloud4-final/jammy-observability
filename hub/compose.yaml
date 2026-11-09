@@ -33,6 +33,7 @@ services:
     volumes:
       - ${OBS_ROOT:-/opt/jammy-obs}/data/alertmanager:/alertmanager
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/templates:/etc/alertmanager/templates:ro
       - ${OBS_ROOT:-/opt/jammy-obs}/secrets:/etc/alertmanager/secrets:ro
 
   loki:
