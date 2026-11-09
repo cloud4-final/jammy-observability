@@ -88,3 +88,265 @@ tests:
         alertname: SiteProbeDown
         exp_alerts: []
 
+  - interval: 1m
+    input_series:
+    - series: up{job="postgres",site="jammy-b",instance="b"}
+      values: 0+0x12
+    alert_rule_test:
+    - eval_time: 1m
+      alertname: PostgresExporterDown
+      exp_alerts: []
+    - eval_time: 2m
+      alertname: PostgresExporterDown
+      exp_alerts:
+      - exp_labels:
+          severity: critical
+          job: postgres
+          site: jammy-b
+          instance: b
+        exp_annotations:
+          summary: PostgresExporterDown
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+    - series: pg_up{job="postgres",site="jammy-b",instance="b"}
+      values: 0+0x12
+    - series: up{job="postgres",site="jammy-b",instance="b"}
+      values: 1+0x12
+    alert_rule_test:
+    - eval_time: 0m
+      alertname: PostgresDown
+      exp_alerts: []
+    - eval_time: 1m
+      alertname: PostgresDown
+      exp_alerts:
+      - exp_labels:
+          severity: critical
+          job: postgres
+          site: jammy-b
+          instance: b
+        exp_annotations:
+          summary: PostgresDown
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+    - series: pg_replication_is_replica{job="postgres",site="jammy-a",instance="a"}
+      values: 0+0x12
+    alert_rule_test:
+    - eval_time: 1m
+      alertname: ReplicaNotStreaming
+      exp_alerts: []
+    - eval_time: 2m
+      alertname: ReplicaNotStreaming
+      exp_alerts:
+      - exp_labels:
+          severity: critical
+          job: postgres
+          site: jammy-a
+          instance: a
+        exp_annotations:
+          summary: ReplicaNotStreaming
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+    - series: pg_stat_replication_pg_wal_lsn_diff{site="jammy-a",instance="a",state="streaming",application_name="b-data-01"}
+      values: 70000000+0x12
+    alert_rule_test:
+    - eval_time: 4m
+      alertname: ReplicationLagHigh
+      exp_alerts: []
+    - eval_time: 5m
+      alertname: ReplicationLagHigh
+      exp_alerts:
+      - exp_labels:
+          severity: warning
+          site: jammy-a
+          instance: a
+          state: streaming
+          application_name: b-data-01
+        exp_annotations:
+          summary: ReplicationLagHigh
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+    - series: pg_replication_slot_slot_is_active{site="jammy-a",instance="a",slot_name="b_data_slot"}
+      values: 0+0x12
+    alert_rule_test:
+    - eval_time: 4m
+      alertname: ReplicationSlotInactive
+      exp_alerts: []
+    - eval_time: 5m
+      alertname: ReplicationSlotInactive
+      exp_alerts:
+      - exp_labels:
+          severity: warning
+          site: jammy-a
+          instance: a
+          slot_name: b_data_slot
+        exp_annotations:
+          summary: ReplicationSlotInactive
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+    - series: pg_replication_slots_pg_wal_lsn_diff{database="",server="127.0.0.1:5432",site="jammy-a",instance="a",slot_name="b_data_slot"}
+      values: 1100000000+0x12
+    alert_rule_test:
+    - eval_time: 9m
+      alertname: ReplicationSlotWalRetained
+      exp_alerts: []
+    - eval_time: 10m
+      alertname: ReplicationSlotWalRetained
+      exp_alerts:
+      - exp_labels:
+          severity: warning
+          site: jammy-a
+          instance: a
+          server: 127.0.0.1:5432
+          slot_name: b_data_slot
+        exp_annotations:
+          summary: ReplicationSlotWalRetained
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+    - series: pg_replication_is_replica{job="postgres",site="jammy-a",instance="a"}
+      values: 0+0x12
+    - series: pg_replication_is_replica{job="postgres",site="jammy-b",instance="b"}
+      values: 0+0x12
+    alert_rule_test:
+    - eval_time: 0m
+      alertname: MultiplePrimaries
+      exp_alerts: []
+    - eval_time: 1m
+      alertname: MultiplePrimaries
+      exp_alerts:
+      - exp_labels:
+          severity: critical
+        exp_annotations:
+          summary: MultiplePrimaries
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+    - series: pg_replication_is_replica{job="postgres",site="jammy-a",instance="a"}
+      values: 0+0x12
+    - series: pg_stat_replication_pg_wal_lsn_diff{job="postgres",site="jammy-a",instance="a",state="streaming",application_name="b"}
+      values: 0+0x12
+    - series: pg_stat_replication_pg_wal_lsn_diff{job="postgres",site="jammy-a",instance="a",state="streaming",application_name="c"}
+      values: 0+0x12
+    - series: pg_replication_lag_seconds{site="jammy-b"}
+      values: 1000+0x12
+    - series: pg_up{site="jammy-b"}
+      values: 1+0x12
+    alert_rule_test:
+    - eval_time: 10m
+      alertname: ReplicaNotStreaming
+      exp_alerts: []
+    - eval_time: 10m
+      alertname: ReplicationLagHigh
+      exp_alerts: []
+    - eval_time: 10m
+      alertname: PostgresDown
+      exp_alerts: []
+    - eval_time: 10m
+      alertname: MultiplePrimaries
+      exp_alerts: []
+  - interval: 1m
+    input_series:
+    - series: pg_replication_is_replica{job="postgres",site="jammy-a",instance="a"}
+      values: 0+0x4
+    - series: pg_stat_replication_pg_wal_lsn_diff{job="postgres",site="jammy-a",instance="a",state="streaming",application_name="b"}
+      values: 0+0x4
+    alert_rule_test:
+    - eval_time: 2m
+      alertname: ReplicaNotStreaming
+      exp_alerts:
+      - exp_labels:
+          severity: critical
+          job: postgres
+          site: jammy-a
+          instance: a
+        exp_annotations:
+          summary: ReplicaNotStreaming
+          description: Check the Data VM, replication connections and disk. 잠정값, k6
+            시험 후 조정
+  - interval: 1m
+    input_series:
+      - series: 'up{job="node_datavm",site="jammy-b",instance="b"}'
+        values: '0+0x12'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: DataVmNodeExporterDown
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: DataVmNodeExporterDown
+        exp_alerts:
+          - exp_labels: {severity: critical, job: node_datavm, site: jammy-b, instance: b}
+            exp_annotations:
+              summary: DataVmNodeExporterDown
+              description: 'Check the Data VM node exporter and network path. 잠정값, k6 시험 후 조정'
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node_datavm",site="jammy-a",instance="a",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '15+0x12'
+      - series: 'node_filesystem_size_bytes{job="node_datavm",site="jammy-a",instance="a",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '100+0x12'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: DataVmDiskLow
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: DataVmDiskLow
+        exp_alerts:
+          - exp_labels: {severity: warning, job: node_datavm, site: jammy-a, instance: a, mountpoint: /srv/postgresql, device: /dev/vdb, fstype: ext4}
+            exp_annotations:
+              summary: DataVmDiskLow
+              description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node_datavm",site="jammy-a",instance="a",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '9+0x12'
+      - series: 'node_filesystem_size_bytes{job="node_datavm",site="jammy-a",instance="a",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '100+0x12'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: DataVmDiskLow
+        exp_alerts:
+          - exp_labels: {severity: critical, job: node_datavm, site: jammy-a, instance: a, mountpoint: /srv/postgresql, device: /dev/vdb, fstype: ext4}
+            exp_annotations:
+              summary: DataVmDiskLow
+              description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
+          - exp_labels: {severity: warning, job: node_datavm, site: jammy-a, instance: a, mountpoint: /srv/postgresql, device: /dev/vdb, fstype: ext4}
+            exp_annotations:
+              summary: DataVmDiskLow
+              description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node_datavm",site="jammy-obs",instance="vm",mountpoint="/"}'
+        values: '1+0x12'
+      - series: 'node_filesystem_size_bytes{job="node_datavm",site="jammy-obs",instance="vm",mountpoint="/"}'
+        values: '100+0x12'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HubDiskLow
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node_datavm",site="jammy-b",instance="b",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '15+0x12 9+0x12'
+      - series: 'node_filesystem_size_bytes{job="node_datavm",site="jammy-b",instance="b",mountpoint="/srv/postgresql",device="/dev/vdb",fstype="ext4"}'
+        values: '100+0x25'
+    alert_rule_test:
+      # 15% for 13m -> warning firing; drops to 9% at 13m, critical still pending at 18m, warning must not disappear
+      - eval_time: 18m
+        alertname: DataVmDiskLow
+        exp_alerts:
+          - exp_labels: {severity: warning, job: node_datavm, site: jammy-b, instance: b, mountpoint: /srv/postgresql, device: /dev/vdb, fstype: ext4}
+            exp_annotations:
+              summary: DataVmDiskLow
+              description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
