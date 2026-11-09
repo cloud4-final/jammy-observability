@@ -44,6 +44,6 @@ def test_host_node_queries_exclude_data_vm():
                     expr = target.get('expr', '')
                     for selector in re.findall(r'\bnode_[a-zA-Z0-9_]+\{([^}]*)\}', expr):
                         # Data VM series are allowed only when selected explicitly.
-                        assert 'job="node"' in selector or 'job="node_datavm"' in selector, (name, panel['title'], expr)
+                        assert re.search(r'(?:^|,)\s*job="(?:node|node_datavm)"\s*(?:,|$)', selector), (name, panel['title'], expr)
                 check(panel.get('panels', []))
         check(dashboard['panels'])
