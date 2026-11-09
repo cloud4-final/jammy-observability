@@ -35,3 +35,16 @@ def test_data_vm_node_job(tmp_path, site, address):
     jobs = {job['job_name']: job for job in config['scrape_configs']}
     assert jobs['node_datavm']['static_configs'] == [{'targets': [address], 'labels': {'layer': 'vm'}}]
     assert jobs['node']['static_configs'] == [{'targets': ['127.0.0.1:9100'], 'labels': {'layer': 'host'}}]
+
+
+def test_host_dashboards_select_host_node_job_only():
+    """Data VM node_exporter series (job=node_datavm) must not leak into host panels."""
+    import json
+    import re
+    from pathlib import Path
+
+    dashboards = Path(__file__).resolve().parents[1] / "hub" / "grafana" / "dashboards"
+    for name in ("jammy-noc", "jammy-vms", "jammy-network"):
+        text = json.dumps(json.loads((dashboards / f"{name}.json").read_text(encoding="utf-8")))
+        for selector in re.findall(r"\bnode_[a-zA-Z0-9_]+\{([^}]*)\}", text):
+            assert 'job=\\"node\\"' in selector or 'job=\\"node_datavm\\"' in selector, (name, selector)

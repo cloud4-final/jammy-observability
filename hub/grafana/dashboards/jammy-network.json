@@ -398,7 +398,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_receive_bytes_total{site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval]) * 8",
+          "expr": "rate(node_network_receive_bytes_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval]) * 8",
           "legendFormat": "{{site}} - {{device}} rx",
           "range": true,
           "refId": "A"
@@ -409,7 +409,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_bytes_total{site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval]) * 8",
+          "expr": "rate(node_network_transmit_bytes_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval]) * 8",
           "legendFormat": "{{site}} - {{device}} tx",
           "range": true,
           "refId": "B"
@@ -459,7 +459,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_receive_drop_total{site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_drop_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
           "legendFormat": "{{site}} - {{device}} rx drops",
           "range": true,
           "refId": "A"
@@ -470,7 +470,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_drop_total{site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_drop_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
           "legendFormat": "{{site}} - {{device}} tx drops",
           "range": true,
           "refId": "B"
@@ -481,7 +481,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_receive_errs_total{site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_errs_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
           "legendFormat": "{{site}} - {{device}} rx errors",
           "range": true,
           "refId": "C"
@@ -492,7 +492,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_errs_total{site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_errs_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
           "legendFormat": "{{site}} - {{device}} tx errors",
           "range": true,
           "refId": "D"
@@ -542,7 +542,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(node_netstat_Tcp_RetransSegs{site=~\"$site\"}[5m])",
+          "expr": "rate(node_netstat_Tcp_RetransSegs{job=\"node\",site=~\"$site\"}[5m])",
           "legendFormat": "{{site}}",
           "range": true,
           "refId": "A"

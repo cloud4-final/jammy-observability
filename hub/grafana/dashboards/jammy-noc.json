@@ -414,7 +414,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "1 - avg by (site) (rate(node_cpu_seconds_total{site=~\"$site\",mode=\"idle\"}[2m]))",
+          "expr": "1 - avg by (site) (rate(node_cpu_seconds_total{job=\"node\",site=~\"$site\",mode=\"idle\"}[2m]))",
           "legendFormat": "{{site}} CPU",
           "range": true,
           "refId": "A"
@@ -459,7 +459,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "1 - (node_memory_MemAvailable_bytes{site=~\"$site\"} / node_memory_MemTotal_bytes{site=~\"$site\"})",
+          "expr": "1 - (node_memory_MemAvailable_bytes{job=\"node\",site=~\"$site\"} / node_memory_MemTotal_bytes{job=\"node\",site=~\"$site\"})",
           "legendFormat": "{{site}} Mem",
           "range": true,
           "refId": "A"
@@ -504,7 +504,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "1 - (node_filesystem_avail_bytes{site=~\"$site\",mountpoint=\"/\"} / node_filesystem_size_bytes{site=~\"$site\",mountpoint=\"/\"})",
+          "expr": "1 - (node_filesystem_avail_bytes{job=\"node\",site=~\"$site\",mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"node\",site=~\"$site\",mountpoint=\"/\"})",
           "legendFormat": "{{site}} Disk /",
           "range": true,
           "refId": "A"
