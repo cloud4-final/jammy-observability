@@ -140,11 +140,14 @@ if [[ ! -f "${secrets_dir}/grafana_admin_password" ]]; then
   chmod 600 "${secrets_dir}/grafana_admin_password"
 fi
 
-if [[ ! -f "${secrets_dir}/slack_webhook_url" ]]; then
-  echo "WARN: ${secrets_dir}/slack_webhook_url missing; setting placeholder. Alerts will not reach Slack #jammy-alerts." >&2
-  echo "https://hooks.slack.com/services/PLACEHOLDER" > "${secrets_dir}/slack_webhook_url"
-  chmod 600 "${secrets_dir}/slack_webhook_url"
+webhook_file="${secrets_dir}/slack_webhook_url"
+if [[ ! -s "${webhook_file}" ]] || ! grep -qE '^https://hooks\.slack\.com/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9]+$' "${webhook_file}"; then
+  echo "ERROR: ${webhook_file} is missing or not a Slack Incoming Webhook URL; alerts would not reach #jammy-alerts." >&2
+  echo "Create it on the hub host first (input is hidden):" >&2
+  echo "  ssh -t <user>@<hub> 'umask 077; read -rsp \"Slack webhook URL: \" U; echo; printf \"%s\\n\" \"\$U\" > ${webhook_file}'" >&2
+  exit 1
 fi
+chmod 600 "${webhook_file}"
 EOF
 
 echo "=== [3/5] Synchronizing stack configs to ${HOST} ==="

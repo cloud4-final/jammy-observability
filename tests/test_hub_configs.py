@@ -211,3 +211,15 @@ def test_rules_and_dashboard_use_vantage_filter():
             f"Freshness panel target expr missing timestamp(up{{...,vantage=\"\"}}): {exprs}"
         )
 
+
+
+def test_alertmanager_groups_by_severity():
+    with open(ALERTMANAGER_YML, "r", encoding="utf-8") as f:
+        am_cfg = yaml.safe_load(f)
+    assert "severity" in am_cfg["route"]["group_by"]
+
+
+def test_deploy_refuses_missing_slack_webhook():
+    script = (Path(__file__).resolve().parents[1] / "hub" / "deploy.sh").read_text(encoding="utf-8")
+    assert "PLACEHOLDER" not in script, "deploy must not write a placeholder webhook"
+    assert "hooks\\.slack\\.com/services/" in script
