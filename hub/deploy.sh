@@ -149,6 +149,13 @@ if [[ ! -s "${webhook_file}" ]] || [[ "$(wc -l < "${webhook_file}")" -gt 1 ]] ||
   echo "  ssh -t <user>@<hub> 'umask 077; read -rsp \"Slack webhook URL: \" U; echo; printf \"%s\\n\" \"\$U\" > ${webhook_file}'" >&2
   exit 1
 fi
+# Alertmanager runs as ${OBS_UID:-1000} (hub/compose.yaml); after chmod 600 only the owner can read the file.
+am_uid="${OBS_UID:-1000}"
+if [[ "$(stat -c %u "${webhook_file}")" != "${am_uid}" ]]; then
+  echo "ERROR: ${webhook_file} is owned by uid $(stat -c %u "${webhook_file}"), but Alertmanager runs as uid ${am_uid}; it could not read the webhook." >&2
+  echo "Fix ownership first: sudo chown ${am_uid}:${OBS_GID:-1000} ${webhook_file}" >&2
+  exit 1
+fi
 chmod 600 "${webhook_file}"
 EOF
 
