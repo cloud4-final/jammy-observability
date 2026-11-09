@@ -73,8 +73,9 @@ done
 
 # Step 1: Validate --site
 case "$SITE" in
-  jammy-a|jammy-b|jammy-c)
-    ;;
+  jammy-a) DATA_VM_IP=10.11.0.130 ;;
+  jammy-b) DATA_VM_IP=10.21.0.130 ;;
+  jammy-c) DATA_VM_IP=10.31.0.130 ;;
   *)
     echo "Error: Invalid site '$SITE'. Allowed values: jammy-a, jammy-b, jammy-c." >&2
     exit 2
@@ -84,7 +85,7 @@ esac
 # Handle --render-only early (does not require root)
 if [ -n "$RENDER_ONLY" ]; then
   mkdir -p "${RENDER_ONLY}/etc"
-  sed -e "s|@SITE_ID@|${SITE}|g" -e "s|@OBS_HOST@|${OBS_HOST}|g" \
+  sed -e "s|@SITE_ID@|${SITE}|g" -e "s|@OBS_HOST@|${OBS_HOST}|g" -e "s|@DATA_VM_IP@|${DATA_VM_IP}|g" \
     "${SCRIPT_DIR}/templates/prometheus.yml.tmpl" > "${RENDER_ONLY}/etc/prometheus.yml"
   sed -e "s|@SITE_ID@|${SITE}|g" -e "s|@OBS_HOST@|${OBS_HOST}|g" \
     "${SCRIPT_DIR}/templates/config.alloy.tmpl" > "${RENDER_ONLY}/etc/config.alloy"
@@ -370,7 +371,7 @@ fi
 
 # Step 7: Render configuration templates
 echo "Rendering configuration templates to /opt/jammy-obs-agent/etc/..."
-sed -e "s|@SITE_ID@|${SITE}|g" -e "s|@OBS_HOST@|${OBS_HOST}|g" \
+sed -e "s|@SITE_ID@|${SITE}|g" -e "s|@OBS_HOST@|${OBS_HOST}|g" -e "s|@DATA_VM_IP@|${DATA_VM_IP}|g" \
   "${SCRIPT_DIR}/templates/prometheus.yml.tmpl" > /opt/jammy-obs-agent/etc/prometheus.yml
 sed -e "s|@SITE_ID@|${SITE}|g" -e "s|@OBS_HOST@|${OBS_HOST}|g" \
   "${SCRIPT_DIR}/templates/config.alloy.tmpl" > /opt/jammy-obs-agent/etc/config.alloy
@@ -391,6 +392,9 @@ if [ "$NO_START" = false ]; then
     echo "Reloading systemd and enabling services..."
     systemctl daemon-reload
     systemctl enable --now jammy-prometheus jammy-node-exporter jammy-blackbox jammy-alloy prometheus-libvirt-exporter
+    # enable --now does not restart running units; restart config consumers so re-rendered configs take effect.
+    echo "Restarting services that read rendered configs..."
+    systemctl restart jammy-prometheus jammy-blackbox jammy-alloy
   fi
 else
   echo "--no-start specified: Skipping service activation."
