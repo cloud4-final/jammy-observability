@@ -268,7 +268,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (site)(libvirt_domain_info_maximum_memory_bytes{site=~\"$site\"}) / max by (site)(node_memory_MemTotal_bytes{site=~\"$site\"})",
+          "expr": "sum by (site)(libvirt_domain_info_maximum_memory_bytes{site=~\"$site\"}) / max by (site)(node_memory_MemTotal_bytes{job=\"node\",site=~\"$site\"})",
           "legendFormat": "{{site}}",
           "range": true,
           "refId": "A"

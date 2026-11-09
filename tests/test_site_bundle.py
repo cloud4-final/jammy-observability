@@ -122,6 +122,7 @@ def test_all_listen_loopback(rendered_bundle):
 def test_no_ip_literals():
     ipv4_pattern = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
     allowed_ips = {"127.0.0.1", "0.0.0.0"}
+    data_vm_ips = {"10.11.0.130", "10.21.0.130", "10.31.0.130"}
 
     assert SITE_DIR.exists(), f"Site dir {SITE_DIR} does not exist"
     for root, _, files in os.walk(SITE_DIR):
@@ -134,7 +135,7 @@ def test_no_ip_literals():
             for line_no, line in enumerate(text.splitlines(), start=1):
                 ips = ipv4_pattern.findall(line)
                 for ip in ips:
-                    assert ip in allowed_ips, (
+                    assert ip in allowed_ips or (file_path == INSTALL_SH and ip in data_vm_ips), (
                         f"Forbidden IP literal '{ip}' found in {file_path.relative_to(REPO_ROOT)}:{line_no}: {line}"
                     )
 
@@ -259,3 +260,9 @@ def test_readme_libvirt_guidance():
     readme_content = readme_path.read_text(encoding="utf-8")
     assert "curl -s 127.0.0.1:9177/metrics | grep libvirt_up" in readme_content
     assert "libvirt-sock-ro" in readme_content
+
+
+def test_install_restarts_config_consumers():
+    """Re-running install.sh must apply re-rendered configs to already running units."""
+    script = (Path(__file__).resolve().parents[1] / "site" / "install.sh").read_text()
+    assert "systemctl restart jammy-prometheus jammy-blackbox jammy-alloy" in script

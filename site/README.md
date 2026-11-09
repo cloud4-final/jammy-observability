@@ -27,6 +27,8 @@
 
 ---
 
+The site agent also scrapes its local Data VM postgres_exporter on port 9187 using the site-specific address configured by `install.sh`. The `postgres` and `node_datavm` jobs use `layer: vm` and forward metrics through the existing remote write; `node_datavm` scrapes the same Data VM on port 9100. The host `node` job remains separate with `layer: host`.
+
 ## 2. 디렉토리 구조 및 설치 경로
 
 ```
