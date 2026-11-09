@@ -11,10 +11,10 @@ DASHBOARDS = ROOT / 'hub/grafana/dashboards'
 def test_dashboard_integrity():
     paths = sorted(DASHBOARDS.glob('*.json'))
     assert (DASHBOARDS / 'jammy-db.json') in paths
-    sources = yaml.safe_load((ROOT / 'hub/grafana/provisioning/datasources/datasources.yaml').read_text())
+    sources = yaml.safe_load((ROOT / 'hub/grafana/provisioning/datasources/datasources.yaml').read_text(encoding='utf-8'))
     valid_uids = {item['uid'] for item in sources['datasources']}
     for path in paths:
-        dashboard = json.loads(path.read_text())
+        dashboard = json.loads(path.read_text(encoding='utf-8'))
         variables = {v['name'] for v in dashboard.get('templating', {}).get('list', [])}
         ids = set()
         def check_panels(panels):
@@ -37,7 +37,7 @@ def test_dashboard_integrity():
 
 def test_host_node_queries_exclude_data_vm():
     for name in ('jammy-noc', 'jammy-vms', 'jammy-network'):
-        dashboard = json.loads((DASHBOARDS / f'{name}.json').read_text())
+        dashboard = json.loads((DASHBOARDS / f'{name}.json').read_text(encoding='utf-8'))
         def check(panels):
             for panel in panels:
                 for target in panel.get('targets', []):

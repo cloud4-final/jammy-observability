@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def test_network_rows_and_repeats():
-    dashboard = json.loads((Path(__file__).resolve().parents[1] / 'hub/grafana/dashboards/jammy-network.json').read_text())
+    dashboard = json.loads((Path(__file__).resolve().parents[1] / 'hub/grafana/dashboards/jammy-network.json').read_text(encoding='utf-8'))
     rows = [panel for panel in dashboard['panels'] if panel['type'] == 'row']
     assert [r['title'] for r in rows] == ['Probe matrices', 'Site → Site RTT', 'Uplink (Wi-Fi / internet)', 'Tailscale (tailscale0)', 'VM bridges (br-vm, br-data)', 'Wired NIC (eno1 / enp2s0)', 'Errors & drops', 'TCP retransmits']
     assert [r['collapsed'] for r in rows] == [False, False, False, False, True, True, True, True]
