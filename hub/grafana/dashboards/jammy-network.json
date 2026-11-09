@@ -59,16 +59,16 @@
   "liveNow": false,
   "panels": [
     {
+      "id": 100,
+      "title": "Probe matrices",
+      "type": "row",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
-      },
-      "id": 100,
-      "title": "Inter-Site Network Probe Matrices",
-      "type": "row"
+      }
     },
     {
       "datasource": {
@@ -173,7 +173,8 @@
         }
       ],
       "title": "ICMP Probe Matrix (vantage × target_site)",
-      "type": "table"
+      "type": "table",
+      "description": "**거점 간 ping 성공 여부**\n\n- 행 = 출발, 열 = 도착\n- 1 = 성공, 0 = 실패\n- 한 행 전체 0 → 출발 거점 문제"
     },
     {
       "datasource": {
@@ -278,7 +279,8 @@
         }
       ],
       "title": "TCP (SSH) Probe Matrix (vantage × target_site)",
-      "type": "table"
+      "type": "table",
+      "description": "**거점 간 SSH(22) 연결 여부**\n\n- ping은 되는데 이것만 실패 → 방화벽·ACL 문제"
     },
     {
       "gridPos": {
@@ -296,260 +298,531 @@
       "type": "text"
     },
     {
+      "id": 101,
+      "title": "Site → Site RTT",
+      "type": "row",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 10
-      },
-      "id": 101,
-      "title": "Latency & Interface Performance",
-      "type": "row"
+      }
     },
     {
+      "id": 4,
+      "title": "RTT from $vantage",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
           "unit": "s"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 11
-      },
-      "id": 4,
       "options": {
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
         }
       },
       "targets": [
         {
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "editorMode": "code",
-          "expr": "probe_icmp_duration_seconds{phase=\"rtt\"}",
-          "legendFormat": "{{vantage}}→{{target_site}}",
-          "range": true,
-          "refId": "A"
+          "expr": "probe_icmp_duration_seconds{phase=\"rtt\",vantage=~\"$vantage\"}",
+          "legendFormat": "→ {{target_site}}"
         }
       ],
-      "title": "ICMP RTT Latency",
-      "type": "timeseries"
+      "repeat": "vantage",
+      "repeatDirection": "h",
+      "maxPerRow": 4,
+      "description": "**거점 간 왕복 시간 (RTT)**\n\n- 평소: 5~50ms, 순간 최대 약 200ms\n- 75ms 근처에서 평평 → relay 경유 중\n- (2026-11-08 실측)"
     },
     {
+      "id": 102,
+      "title": "Uplink (Wi-Fi / internet)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      }
+    },
+    {
+      "id": 5,
+      "title": "$site uplink",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
           "unit": "bps"
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 18
-      },
-      "id": 5,
       "options": {
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
         }
       },
       "targets": [
         {
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "editorMode": "code",
-          "expr": "rate(node_network_receive_bytes_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval]) * 8",
-          "legendFormat": "{{site}} - {{device}} rx",
-          "range": true,
-          "refId": "A"
+          "expr": "rate(node_network_receive_bytes_total{job=\"node\",site=~\"$site\",device=~\"wl.*\"}[$__rate_interval]) * 8",
+          "legendFormat": "{{device}} rx"
         },
         {
+          "refId": "B",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "editorMode": "code",
-          "expr": "rate(node_network_transmit_bytes_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval]) * 8",
-          "legendFormat": "{{site}} - {{device}} tx",
-          "range": true,
-          "refId": "B"
+          "expr": "rate(node_network_transmit_bytes_total{job=\"node\",site=~\"$site\",device=~\"wl.*\"}[$__rate_interval]) * 8",
+          "legendFormat": "{{device}} tx"
         }
       ],
-      "title": "NIC Throughput (Receive / Transmit bps)",
-      "type": "timeseries"
+      "repeat": "site",
+      "repeatDirection": "h",
+      "maxPerRow": 4,
+      "description": "**Wi-Fi 송수신 속도**\n\n- 인터넷과 거점 간 트래픽이 모두 지나감\n- 업로드 약 36~54 MB/s에서 평평 → 회선 포화\n- (2026-11-08 실측)"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
-          "unit": "pps"
-        },
-        "overrides": []
-      },
+      "id": 103,
+      "title": "Tailscale (tailscale0)",
+      "type": "row",
+      "collapsed": false,
       "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 18
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(node_network_receive_drop_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
-          "legendFormat": "{{site}} - {{device}} rx drops",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(node_network_transmit_drop_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
-          "legendFormat": "{{site}} - {{device}} tx drops",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(node_network_receive_errs_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
-          "legendFormat": "{{site}} - {{device}} rx errors",
-          "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(node_network_transmit_errs_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])",
-          "legendFormat": "{{site}} - {{device}} tx errors",
-          "range": true,
-          "refId": "D"
-        }
-      ],
-      "title": "NIC Drops & Errors Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1
-          },
-          "unit": "pps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
+        "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 26
+      }
+    },
+    {
+      "id": 8,
+      "title": "$site tailscale",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 27
       },
-      "id": 7,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps"
+        },
+        "overrides": []
+      },
       "options": {
         "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
         }
       },
       "targets": [
         {
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "editorMode": "code",
-          "expr": "rate(node_netstat_Tcp_RetransSegs{job=\"node\",site=~\"$site\"}[5m])",
-          "legendFormat": "{{site}}",
-          "range": true,
-          "refId": "A"
+          "expr": "rate(node_network_receive_bytes_total{job=\"node\",site=~\"$site\",device=~\"tailscale0\"}[$__rate_interval]) * 8",
+          "legendFormat": "{{device}} rx"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(node_network_transmit_bytes_total{job=\"node\",site=~\"$site\",device=~\"tailscale0\"}[$__rate_interval]) * 8",
+          "legendFormat": "{{device}} tx"
         }
       ],
-      "title": "TCP Retransmission Segments Rate",
-      "type": "timeseries"
+      "repeat": "site",
+      "repeatDirection": "h",
+      "maxPerRow": 4,
+      "description": "**Tailscale 송수신 속도**\n\n- 거점 간 전송, 관측 데이터 전송이 보임"
+    },
+    {
+      "id": 104,
+      "title": "VM bridges (br-vm, br-data)",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "panels": [
+        {
+          "id": 9,
+          "title": "$site VM bridges",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 35
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "rate(node_network_receive_bytes_total{job=\"node\",site=~\"$site\",device=~\"br-vm|br-data\"}[$__rate_interval]) * 8",
+              "legendFormat": "{{device}} rx"
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "rate(node_network_transmit_bytes_total{job=\"node\",site=~\"$site\",device=~\"br-vm|br-data\"}[$__rate_interval]) * 8",
+              "legendFormat": "{{device}} tx"
+            }
+          ],
+          "repeat": "site",
+          "repeatDirection": "h",
+          "maxPerRow": 4,
+          "description": "**VM 브리지 트래픽**\n\n- `br-vm` = 앱 VM, `br-data` = DB VM"
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "title": "Wired NIC (eno1 / enp2s0)",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "panels": [
+        {
+          "id": 10,
+          "title": "$site wired",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 36
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bps"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "rate(node_network_receive_bytes_total{job=\"node\",site=~\"$site\",device=~\"eno.*|enp.*\"}[$__rate_interval]) * 8",
+              "legendFormat": "{{device}} rx"
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "rate(node_network_transmit_bytes_total{job=\"node\",site=~\"$site\",device=~\"eno.*|enp.*\"}[$__rate_interval]) * 8",
+              "legendFormat": "{{device}} tx"
+            }
+          ],
+          "repeat": "site",
+          "repeatDirection": "h",
+          "maxPerRow": 4,
+          "description": "**유선 NIC 트래픽**\n\n- 현재 랜선 미연결 → 0이 정상"
+        },
+        {
+          "id": 11,
+          "title": "$site wired NIC up",
+          "type": "stat",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 36
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "node_network_up{job=\"node\",site=~\"$site\",device=~\"eno.*|enp.*\"}",
+              "legendFormat": "{{device}}"
+            }
+          ],
+          "repeat": "site",
+          "repeatDirection": "h",
+          "maxPerRow": 4,
+          "description": "**유선 NIC 연결 상태**\n\n- 현재 0(미연결)이 정상"
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "title": "Errors & drops",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "panels": [
+        {
+          "id": 6,
+          "title": "$site errors and drops",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 37
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (device) (rate(node_network_receive_drop_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])) > 0",
+              "legendFormat": "{{device}} rx drops"
+            },
+            {
+              "refId": "B",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (device) (rate(node_network_transmit_drop_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])) > 0",
+              "legendFormat": "{{device}} tx drops"
+            },
+            {
+              "refId": "C",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (device) (rate(node_network_receive_errs_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])) > 0",
+              "legendFormat": "{{device}} rx errors"
+            },
+            {
+              "refId": "D",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "sum by (device) (rate(node_network_transmit_errs_total{job=\"node\",site=~\"$site\",device!~\"lo|vnet.*|docker.*|veth.*\"}[$__rate_interval])) > 0",
+              "legendFormat": "{{device}} tx errors"
+            }
+          ],
+          "repeat": "site",
+          "repeatDirection": "h",
+          "maxPerRow": 4,
+          "description": "**패킷 drop·error**\n\n- 비어 있으면 오류 없음\n- Wi-Fi에서 증가 → 무선 품질 문제"
+        },
+        {
+          "id": 12,
+          "type": "text",
+          "title": "Errors and drops note",
+          "gridPos": {
+            "h": 3,
+            "w": 12,
+            "x": 12,
+            "y": 37
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "An empty panel means no errors or drops."
+          }
+        }
+      ]
+    },
+    {
+      "id": 107,
+      "title": "TCP retransmits",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "panels": [
+        {
+          "id": 7,
+          "title": "TCP retransmits",
+          "type": "timeseries",
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 38
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "expr": "rate(node_netstat_Tcp_RetransSegs{job=\"node\",site=~\"$site\"}[$__rate_interval])",
+              "legendFormat": "{{site}}"
+            }
+          ],
+          "description": "**TCP 재전송**\n\n- 증가 → 패킷 손실\n- RTT 패널과 같은 시각 비교"
+        }
+      ]
     }
   ],
   "refresh": "15s",
@@ -581,6 +854,34 @@
         "options": [],
         "query": {
           "query": "label_values(up{vantage=\"\"}, site)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(probe_success{job=\"blackbox_icmp\"}, vantage)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Vantage",
+        "multi": true,
+        "name": "vantage",
+        "options": [],
+        "query": {
+          "query": "label_values(probe_success{job=\"blackbox_icmp\"}, vantage)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

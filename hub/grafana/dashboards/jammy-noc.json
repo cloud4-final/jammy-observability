@@ -92,7 +92,8 @@
         "viewMode": "list"
       },
       "title": "Active Alerts (Firing / Pending)",
-      "type": "alertlist"
+      "type": "alertlist",
+      "description": "**지금 울리는 경보**\n\n- 같은 내용이 Slack `#jammy-alerts`로 전송"
     },
     {
       "collapsed": false,
@@ -193,7 +194,8 @@
         }
       ],
       "title": "Site Reachability (ICMP)",
-      "type": "stat"
+      "type": "stat",
+      "description": "**obs → 거점 ping**\n\n- Down → 거점 전체 연결 문제 (전원, 건물망, Tailscale)"
     },
     {
       "datasource": {
@@ -249,7 +251,8 @@
         }
       ],
       "title": "Site Data Freshness (Lag)",
-      "type": "stat"
+      "type": "stat",
+      "description": "**거점 지표 마지막 도착 후 경과 시간**\n\n- 정상: 15초 근처\n- 계속 증가 → 거점 수집 중단"
     },
     {
       "collapsed": false,
@@ -258,6 +261,434 @@
         "w": 24,
         "x": 0,
         "y": 10
+      },
+      "id": 105,
+      "panels": [],
+      "title": "Database Summary (PostgreSQL)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "Down"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Up"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "semi-dark-yellow",
+                  "index": 9,
+                  "text": "No data"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 11
+      },
+      "id": 30,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "pg_up{site=~\"$site\"}",
+          "legendFormat": "{{site}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "PostgreSQL Up",
+      "type": "stat",
+      "description": "**DB 접속 가능 여부**\n\n- 자세한 내용은 `jammy-db`"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "blue",
+                  "index": 0,
+                  "text": "Primary"
+                },
+                "1": {
+                  "color": "purple",
+                  "index": 1,
+                  "text": "Replica"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "semi-dark-yellow",
+                  "index": 9,
+                  "text": "No data"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 11
+      },
+      "id": 31,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "pg_replication_is_replica{site=~\"$site\"}",
+          "legendFormat": "{{site}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Role",
+      "type": "stat",
+      "description": "**DB 역할**\n\n- 정상: A = Primary, B·C = Replica"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "semi-dark-yellow",
+                  "index": 9,
+                  "text": "No data"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 11
+      },
+      "id": 32,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count(pg_stat_replication_pg_wal_lsn_diff{state=\"streaming\"} and on(site) (pg_replication_is_replica == 0)) or on() (count(pg_replication_is_replica == 0) * 0)",
+          "legendFormat": "streaming",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Streaming Replicas (on primary)",
+      "type": "stat",
+      "description": "**원본에 붙은 복제본 수**\n\n- 정상: 2"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "semi-dark-yellow",
+                  "index": 9,
+                  "text": "No data"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 16777216
+              },
+              {
+                "color": "red",
+                "value": 67108864
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 11
+      },
+      "id": 33,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(pg_stat_replication_pg_wal_lsn_diff)",
+          "legendFormat": "lag",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Max Replication Delay (WAL bytes)",
+      "type": "stat",
+      "description": "**가장 많이 밀린 복제 지연**\n\n- 정상: 0 근처"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "semi-dark-yellow",
+                  "index": 9,
+                  "text": "No data"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 34,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "1 - (node_filesystem_avail_bytes{job=\"node_datavm\",site=~\"$site\",mountpoint=\"/srv/postgresql\"} / node_filesystem_size_bytes{job=\"node_datavm\",site=~\"$site\",mountpoint=\"/srv/postgresql\"})",
+          "legendFormat": "{{site}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Data Disk Used (/srv/postgresql)",
+      "type": "stat",
+      "description": "**DB 데이터 디스크 사용률**\n\n- 80% 경고, 90% 위험"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
       },
       "id": 101,
       "title": "Scrape Target Status",
@@ -301,7 +732,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 20
       },
       "id": 3,
       "options": {
@@ -332,7 +763,8 @@
         }
       ],
       "title": "Targets (up) by Site / Job",
-      "type": "table"
+      "type": "table",
+      "description": "**수집 대상 상태**\n\n- 1 = 정상, 0 = 실패\n- node = 호스트, node_datavm = DB VM, postgres = DB"
     },
     {
       "collapsed": false,
@@ -340,7 +772,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 26
       },
       "id": 102,
       "title": "Host Node Resource Metrics",
@@ -392,7 +824,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 27
       },
       "id": 4,
       "options": {
@@ -421,7 +853,8 @@
         }
       ],
       "title": "Node CPU Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**거점 호스트 CPU 사용률**\n\n- VM 사용분 포함"
     },
     {
       "datasource": {
@@ -442,7 +875,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 18
+        "y": 27
       },
       "id": 5,
       "options": {
@@ -466,7 +899,8 @@
         }
       ],
       "title": "Node Memory Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**거점 호스트 메모리 사용률**\n\n"
     },
     {
       "datasource": {
@@ -487,7 +921,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 18
+        "y": 27
       },
       "id": 6,
       "options": {
@@ -511,7 +945,8 @@
         }
       ],
       "title": "Node Root Disk Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**거점 호스트 루트 디스크 사용률**\n\n"
     },
     {
       "collapsed": false,
@@ -519,7 +954,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 33
       },
       "id": 103,
       "title": "Application Performance",
@@ -544,7 +979,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 34
       },
       "id": 7,
       "options": {
@@ -568,7 +1003,8 @@
         }
       ],
       "title": "Application RPS by Site",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**collector 초당 요청 수**\n\n- 현재는 obs 데모만 표시 (거점 배포 전)"
     },
     {
       "datasource": {
@@ -589,7 +1025,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 34
       },
       "id": 8,
       "options": {
@@ -613,7 +1049,8 @@
         }
       ],
       "title": "Application Latency p95 by Site",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "**collector 응답 시간 p95**\n\n- 현재는 obs 데모만 표시 (거점 배포 전)"
     },
     {
       "collapsed": false,
@@ -621,7 +1058,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 40
       },
       "id": 104,
       "title": "Central Logs (Loki)",
@@ -636,7 +1073,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 41
       },
       "id": 9,
       "options": {
@@ -661,7 +1098,8 @@
         }
       ],
       "title": "Loki Logs",
-      "type": "logs"
+      "type": "logs",
+      "description": "**거점 로그**\n\n- 경보 시각 전후 확인"
     },
     {
       "datasource": {
@@ -723,7 +1161,8 @@
         }
       ],
       "title": "Site Virtual Machines",
-      "type": "stat"
+      "type": "stat",
+      "description": "**거점별 VM 개수**\n\n- 정상: A 4, B 3, C 3\n- 줄어들면 → VM 꺼짐"
     }
   ],
   "refresh": "10s",

@@ -47,4 +47,4 @@ def test_host_dashboards_select_host_node_job_only():
     for name in ("jammy-noc", "jammy-vms", "jammy-network"):
         text = json.dumps(json.loads((dashboards / f"{name}.json").read_text(encoding="utf-8")))
         for selector in re.findall(r"\bnode_[a-zA-Z0-9_]+\{([^}]*)\}", text):
-            assert 'job=\\"node\\"' in selector or 'job=\\"node_datavm\\"' in selector, (name, selector)
+            assert re.search(r'(?:^|,)\s*job=\\"(?:node|node_datavm)\\"\s*(?:,|$)', selector), (name, selector)
