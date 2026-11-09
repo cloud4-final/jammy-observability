@@ -134,7 +134,7 @@ groups:
           summary: DataVmNodeExporterDown
           description: "Check the Data VM node exporter and network path. 잠정값, k6 시험 후 조정"
       - alert: DataVmDiskLow
-        expr: node_filesystem_avail_bytes{job="node_datavm",mountpoint="/srv/postgresql"} / node_filesystem_size_bytes{job="node_datavm",mountpoint="/srv/postgresql"} < 0.20
+        expr: (node_filesystem_avail_bytes{job="node_datavm",mountpoint="/srv/postgresql"} / node_filesystem_size_bytes{job="node_datavm",mountpoint="/srv/postgresql"} < 0.20) and (node_filesystem_avail_bytes{job="node_datavm",mountpoint="/srv/postgresql"} / node_filesystem_size_bytes{job="node_datavm",mountpoint="/srv/postgresql"} >= 0.10)
         for: 10m
         labels: {severity: warning}
         annotations:

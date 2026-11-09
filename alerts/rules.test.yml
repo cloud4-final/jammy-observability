@@ -321,10 +321,6 @@ tests:
             exp_annotations:
               summary: DataVmDiskLow
               description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
-          - exp_labels: {severity: warning, job: node_datavm, site: jammy-a, instance: a, mountpoint: /srv/postgresql, device: /dev/vdb, fstype: ext4}
-            exp_annotations:
-              summary: DataVmDiskLow
-              description: 'Check available disk space on the Data VM. 잠정값, k6 시험 후 조정'
   - interval: 1m
     input_series:
       - series: 'node_filesystem_avail_bytes{job="node_datavm",site="jammy-obs",instance="vm",mountpoint="/"}'
