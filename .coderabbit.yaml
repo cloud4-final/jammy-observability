@@ -12,7 +12,13 @@ reviews:
     - "!**/dashboards/*.json"
   pre_merge_checks:
     docstrings:
-      mode: off
+      mode: "off"
+    title:
+      mode: "off"
+    description:
+      mode: "off"
+    issue_assessment:
+      mode: "off"
     custom_checks:
       - name: "팀 기준(jammy-docs) 및 파트 연결 호환성"
         mode: warning
@@ -21,6 +27,7 @@ reviews:
           1. status: active인 C-/D-/A-/M- 블록의 규칙(포트, 대역, 끝자리 IP, 환경변수, API 스키마, 태그, 메트릭 라벨, 아키텍처 경계, MVP 범위, C-VER 최소 버전)을 어기면 실패로 표시하고 해당 ID를 인용한다. (단, PR 본문에 jammy-docs PR 링크나 구버전 사용 사유가 명시되어 있으면 의도된 변경으로 보고 통과시킨다.)
           2. 배포일 1년 이상 경과한 구버전 오픈소스·이미지·액션이나 레거시 도구(latest, @master 등)를 사유 없이 쓰면 C-VER-001~004를 인용해 경고한다.
           3. 이 PR이 다른 파트/저장소(jammy-5th, jammy-collector)와의 연결을 깨뜨리거나 merge 후 런타임/배포 장애를 일으키면 실패로 표시한다.
+          4. PR 본문의 Closes #N 이슈가 요구한 핵심 항목이 빠졌으면 경고한다. Part of #N이면 범위 비교를 하지 않는다.
   path_instructions:
     - path: "**"
       instructions: |
