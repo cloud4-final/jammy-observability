@@ -142,30 +142,22 @@ fi
 
 webhook_file="${secrets_dir}/slack_webhook_url"
 webhook_re='^https://hooks\.slack\.com/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9]+$'
-# The whole file must be exactly one URL (one line, optional trailing newline).
-if [[ ! -s "${webhook_file}" ]] || [[ "$(wc -l < "${webhook_file}")" -gt 1 ]] || ! [[ "$(cat "${webhook_file}")" =~ ${webhook_re} ]]; then
-  echo "ERROR: ${webhook_file} is missing or not a Slack Incoming Webhook URL; alerts would not reach #jammy-alerts." >&2
+if [[ ! -e "${webhook_file}" ]]; then
+  echo "ERROR: ${webhook_file} is missing; alerts would not reach Slack #jammy-alerts." >&2
   echo "Create it on the hub host first (input is hidden):" >&2
   echo "  ssh -t <user>@<hub> 'umask 077; read -rsp \"Slack webhook URL: \" U; echo; printf \"%s\\n\" \"\$U\" > ${webhook_file}'" >&2
   exit 1
 fi
-# Alertmanager runs as OBS_UID (hub/compose.yaml). Resolve it like Compose does:
-# shell env first, then the stack .env, then the compose default 1000.
-am_uid="${OBS_UID:-}"
-if [[ -z "${am_uid}" && -f "${target_root}/stack/hub/.env" ]]; then
-  am_uid="$(sed -n 's/^OBS_UID=//p' "${target_root}/stack/hub/.env" | tail -n 1)"
-fi
-am_uid="${am_uid:-1000}"
-# Single supported layout: the deploy user, the secrets dir owner and the webhook file owner
-# are all the Alertmanager uid, so chmod 700/600 never locks Alertmanager out.
-for path in "${secrets_dir}" "${webhook_file}"; do
-  if [[ "$(id -u)" != "${am_uid}" || "$(stat -c %u "${path}")" != "${am_uid}" ]]; then
-    echo "ERROR: deploy user uid $(id -u), ${path} owner uid $(stat -c %u "${path}"), Alertmanager uid ${am_uid}." >&2
-    echo "Deploy as the Alertmanager uid and make it own ${secrets_dir} and its files (e.g. --ssh-user of uid ${am_uid})." >&2
+if [[ -r "${webhook_file}" ]]; then
+  # The whole file must be exactly one URL (one line, optional trailing newline).
+  if [[ ! -s "${webhook_file}" ]] || [[ "$(wc -l < "${webhook_file}")" -gt 1 ]] || ! [[ "$(cat "${webhook_file}")" =~ ${webhook_re} ]]; then
+    echo "ERROR: ${webhook_file} is not exactly one Slack Incoming Webhook URL." >&2
     exit 1
   fi
-done
-chmod 600 "${webhook_file}"
+  if [[ -O "${webhook_file}" ]]; then chmod 600 "${webhook_file}"; fi
+else
+  echo "NOTE: ${webhook_file} is not readable by the deploy user; checking it from inside Alertmanager after start."
+fi
 EOF
 
 echo "=== [3/5] Synchronizing stack configs to ${HOST} ==="
@@ -248,6 +240,13 @@ target_root="$1"
 cd "${target_root}/stack/hub"
 docker compose -f compose.yaml up -d --remove-orphans
 EOF
+fi
+
+echo "=== Verifying Alertmanager can read the Slack webhook ==="
+# Checked inside the running container, so it uses the real Alertmanager uid, directory and file permissions.
+if ! ssh "${REMOTE_TARGET}" 'docker exec jammy-obs-alertmanager sh -c '"'"'f=/etc/alertmanager/secrets/slack_webhook_url; test -r "$f" && [ "$(wc -l < "$f")" -le 1 ] && grep -qE "^https://hooks\.slack\.com/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9]+$" "$f"'"'"''; then
+  echo "ERROR: Alertmanager cannot read a valid Slack webhook at /etc/alertmanager/secrets/slack_webhook_url; fix owner/permissions of ${STACK_ROOT}/secrets for the Alertmanager uid (OBS_UID)." >&2
+  exit 1
 fi
 
 echo "=== [5/5] Waiting for services to become healthy (up to 120s) ==="

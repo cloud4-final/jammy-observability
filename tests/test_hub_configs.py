@@ -223,3 +223,9 @@ def test_deploy_refuses_missing_slack_webhook():
     script = (Path(__file__).resolve().parents[1] / "hub" / "deploy.sh").read_text(encoding="utf-8")
     assert "PLACEHOLDER" not in script, "deploy must not write a placeholder webhook"
     assert "hooks\\.slack\\.com/services/" in script
+
+
+def test_deploy_checks_webhook_from_inside_alertmanager():
+    script = (Path(__file__).resolve().parents[1] / "hub" / "deploy.sh").read_text(encoding="utf-8")
+    assert "docker exec jammy-obs-alertmanager" in script
+    assert 'id -u' not in script, "deploy must not require the SSH user uid to match OBS_UID"
