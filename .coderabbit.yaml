@@ -26,7 +26,7 @@ reviews:
           cloud4-final/jammy-docs의 contracts.md(C-), decisions.md(D-), architecture.md(A-), mvp-roles.md(M-)를 기준으로 검사한다.
           1. status: active인 C-/D-/A-/M- 블록의 규칙(포트, 대역, 끝자리 IP, 환경변수, API 스키마, 태그, 메트릭 라벨, 아키텍처 경계, MVP 범위, C-VER 최소 버전)을 어기면 실패로 표시하고 해당 ID를 인용한다. (단, PR 본문에 jammy-docs PR 링크나 구버전 사용 사유가 명시되어 있으면 의도된 변경으로 보고 통과시킨다.)
           2. 배포일 1년 이상 경과한 구버전 오픈소스·이미지·액션이나 레거시 도구(latest, @master 등)를 사유 없이 쓰면 C-VER-001~004를 인용해 경고한다.
-          3. 이 PR이 다른 파트/저장소(jammy-5th, jammy-collector)와의 연결을 깨뜨리거나 merge 후 런타임/배포 장애를 일으키면 실패로 표시한다.
+          3. 이 PR이 다른 파트/저장소(jammy-5th, jammy-application)와의 연결을 깨뜨리거나 merge 후 런타임/배포 장애를 일으키면 실패로 표시한다.
           4. PR 본문의 Closes #N 이슈가 요구한 핵심 항목이 빠졌으면 경고한다. Part of #N이면 범위 비교를 하지 않는다.
   path_instructions:
     - path: "**"
@@ -63,5 +63,5 @@ knowledge_base:
       instructions: 팀 약속의 기준. contracts.md(C-), decisions.md(D-), architecture.md(A-), mvp-roles.md(M-).
     - repository: cloud4-final/jammy-5th
       instructions: 인프라(AWS·온프레미스), K8s 매니페스트, 부하 시험. 관측 에이전트 배포 및 포트·방화벽 호환성 확인.
-    - repository: cloud4-final/jammy-collector
+    - repository: cloud4-final/jammy-application
       instructions: 수집·조회 API 서버. /metrics 라벨(site, layer 등), OTLP trace/log 연동 호환성 확인.

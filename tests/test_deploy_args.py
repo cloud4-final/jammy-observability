@@ -44,30 +44,30 @@ def test_deploy_case1_explicit_collector_src(tmp_path):
     plan = parse_plan(res.stdout)
     assert plan.get("DEMO") == "true"
     assert plan.get("COLLECTOR_SRC") == str(mock_src)
-    assert plan.get("DEPLOY_IMAGE") == "jammy-collector:local"
+    assert plan.get("DEPLOY_IMAGE") == "jammy-application:local"
 
 
 def test_deploy_case2_collector_image_env_skips_autodetect():
     res = run_deploy(
         ["--demo", "--print-plan"],
-        env={"COLLECTOR_IMAGE": "myregistry.io/jammy-collector:v3.2.1"},
+        env={"COLLECTOR_IMAGE": "myregistry.io/jammy-application:v3.2.1"},
     )
     assert res.returncode == 0
     plan = parse_plan(res.stdout)
     assert plan.get("DEMO") == "true"
     assert plan.get("COLLECTOR_SRC") == ""
-    assert plan.get("DEPLOY_IMAGE") == "myregistry.io/jammy-collector:v3.2.1"
+    assert plan.get("DEPLOY_IMAGE") == "myregistry.io/jammy-application:v3.2.1"
 
 
 def test_deploy_case3_autodetect_when_default_exists(tmp_path):
-    # Simulate a workspace structure where ../jammy-collector exists
+    # Simulate a workspace structure where ../jammy-application exists
     fake_workspace = tmp_path / "workspace"
     fake_hub = fake_workspace / "hub"
     fake_hub.mkdir(parents=True)
     fake_deploy = fake_hub / "deploy.sh"
     fake_deploy.write_text(DEPLOY_SH.read_text(encoding="utf-8"), encoding="utf-8")
 
-    mock_collector = tmp_path / "jammy-collector"
+    mock_collector = tmp_path / "jammy-application"
     mock_collector.mkdir()
 
     cmd = ["bash", str(fake_deploy), "--demo", "--print-plan"]
@@ -80,11 +80,11 @@ def test_deploy_case3_autodetect_when_default_exists(tmp_path):
     plan = parse_plan(res.stdout)
     assert plan.get("DEMO") == "true"
     assert Path(plan.get("COLLECTOR_SRC")).resolve() == mock_collector.resolve()
-    assert plan.get("DEPLOY_IMAGE") == "jammy-collector:local"
+    assert plan.get("DEPLOY_IMAGE") == "jammy-application:local"
 
 
 def test_deploy_case3_fails_when_neither_provided_nor_autodetected(tmp_path):
-    # In an isolated directory where ../jammy-collector does not exist
+    # In an isolated directory where ../jammy-application does not exist
     fake_workspace = tmp_path / "isolated-repo"
     fake_hub = fake_workspace / "hub"
     fake_hub.mkdir(parents=True)

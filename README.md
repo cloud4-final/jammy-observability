@@ -39,10 +39,10 @@ SSH 접속 기본 사용자는 `yang`이며, 환경변수 `SSH_USER` 또는 `--s
 ./hub/deploy.sh
 
 # 데모 백엔드 포함 배포 (로컬 체크아웃 소스 기반)
-./hub/deploy.sh --demo --collector-src ../jammy-collector
+./hub/deploy.sh --demo --collector-src ../jammy-application
 
 # 데모 백엔드 원격 이미지 지정 배포 (COLLECTOR_IMAGE 환경변수 활용)
-COLLECTOR_IMAGE="myregistry/jammy-collector:v1.0" ./hub/deploy.sh --demo
+COLLECTOR_IMAGE="myregistry/jammy-application:v1.0" ./hub/deploy.sh --demo
 ```
 
 ### 3.2 Smoke E2E 검증
@@ -69,5 +69,5 @@ ssh -L 3000:127.0.0.1:3000 yang@jammy-obs
 
 ## 4. 관련 저장소 (Related Repositories)
 
-- 모빌리티 이벤트 수집 백엔드: [cloud4-final/jammy-collector](https://github.com/cloud4-final/jammy-collector)
+- 모빌리티 이벤트 수집 백엔드: [cloud4-final/jammy-application](https://github.com/cloud4-final/jammy-application)
 - 상위 모노레포: [cloud4-final/jammy-5th](https://github.com/cloud4-final/jammy-5th)

@@ -84,14 +84,14 @@ if [[ "${DEMO}" == "true" ]]; then
       exit 1
     fi
     COLLECTOR_SRC="$(cd "${COLLECTOR_SRC}" && pwd)"
-    DEPLOY_IMAGE="jammy-collector:local"
+    DEPLOY_IMAGE="jammy-application:local"
   elif [[ -n "${COLLECTOR_IMAGE:-}" ]]; then
     DEPLOY_IMAGE="${COLLECTOR_IMAGE}"
-  elif [[ -d "${REPO_ROOT}/../jammy-collector" ]]; then
-    COLLECTOR_SRC="$(cd "${REPO_ROOT}/../jammy-collector" && pwd)"
-    DEPLOY_IMAGE="jammy-collector:local"
+  elif [[ -d "${REPO_ROOT}/../jammy-application" ]]; then
+    COLLECTOR_SRC="$(cd "${REPO_ROOT}/../jammy-application" && pwd)"
+    DEPLOY_IMAGE="jammy-application:local"
   else
-    echo "Error: Demo mode requires either --collector-src <path> (or default ${REPO_ROOT}/../jammy-collector) or COLLECTOR_IMAGE environment variable." >&2
+    echo "Error: Demo mode requires either --collector-src <path> (or default ${REPO_ROOT}/../jammy-application) or COLLECTOR_IMAGE environment variable." >&2
     exit 1
   fi
 
@@ -191,7 +191,7 @@ EOF
       "${COLLECTOR_SRC}/" "${REMOTE_TARGET}:${STACK_ROOT}/stack/collector-src/"
     ssh "${REMOTE_TARGET}" bash -s -- "${STACK_ROOT}" << 'EOF'
 set -euo pipefail
-docker build -t jammy-collector:local "$1/stack/collector-src"
+docker build -t jammy-application:local "$1/stack/collector-src"
 EOF
   elif [[ -n "${DEPLOY_IMAGE}" ]]; then
     echo "Pulling collector image on ${HOST}: ${DEPLOY_IMAGE}..."
