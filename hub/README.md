@@ -81,10 +81,10 @@ SSH 기본 접속 사용자는 `yang`이며, 환경변수 `SSH_USER` 또는 `--s
 ./hub/deploy.sh --ssh-user yang
 
 # 데모 백엔드 및 모빌리티 수집기 포함 배포 (로컬 소스 지정)
-./hub/deploy.sh --demo --collector-src ../jammy-collector
+./hub/deploy.sh --demo --collector-src ../jammy-application
 
 # 데모 백엔드 원격 이미지 지정 배포 (COLLECTOR_IMAGE 환경변수 사용 시 docker pull)
-COLLECTOR_IMAGE="myregistry/jammy-collector:v1.0" ./hub/deploy.sh --demo
+COLLECTOR_IMAGE="myregistry/jammy-application:v1.0" ./hub/deploy.sh --demo
 ```
 
 ### 배포 후 상태 점검 및 검증
